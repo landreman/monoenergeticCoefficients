@@ -105,11 +105,21 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
 
            col(MatStencil_i,6) = itheta
            col(MatStencil_j,6) = izeta
-           col(MatStencil_k,6) = ixi+1
+           if (ixi == levelNxi-1) then
+              ! We'd get an error if we tried adding a value at ixi+1.
+              col(MatStencil_k,6) = ixi
+           else
+              col(MatStencil_k,6) = ixi+1
+           end if
 
            col(MatStencil_i,7) = itheta
            col(MatStencil_j,7) = izeta
-           col(MatStencil_k,7) = ixi-1
+           if (ixi == 0) then
+              col(MatStencil_k,7) = ixi
+              ! We'd get an error if we tried adding a value at ixi-1.
+           else
+              col(MatStencil_k,7) = ixi-1
+           end if
 
            valuesToAdd = 0
 
@@ -146,7 +156,7 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
                 nu/2*(    (1-(xi+dxi/2)*(xi+dxi/2)) + (1-(xi-dxi/2)*(xi-dxi/2))   )/(dxi*dxi)
            valuesToAdd(7) = valuesToAdd(7) - nu/2*(1-(xi-dxi/2)*(xi-dxi/2))/(dxi*dxi)
 
-           call MatSetValuesStencil(pcMatrix, 1, row, 7, col, valuesToAdd, INSERT_VALUES, ierr)
+           call MatSetValuesStencil(pcMatrix, 1, row, 7, col, valuesToAdd, ADD_VALUES, ierr)
         end do
      end do
   end do

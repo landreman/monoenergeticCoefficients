@@ -78,12 +78,15 @@ program mmc
   dof = 1
   stencilWidth = 1
   call DMDACreate3d(PETSC_COMM_WORLD, &
-       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_GHOSTED, & ! Options: DM_BOUNDARY_NONE, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_PERIODIC
+       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE, & ! Options: DM_BOUNDARY_NONE, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_PERIODIC
        DMDA_STENCIL_STAR,Ntheta,Nzeta,Nxi, &
        PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, &
        dof, stencilWidth, &
        PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
        dmda, ierr)
+
+  ! I'm not totally sure what this next line does - I think it sets piecewise-constant interpolation instead of piecewise-linear:
+!  call DMDASetInterpolationType(dmda, DMDA_Q0, ierr)
 
   call KSPSetDM(ksp,dmda,ierr)
   call KSPSetComputeRHS(ksp,populateRHS,userContext,ierr)

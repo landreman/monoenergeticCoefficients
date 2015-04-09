@@ -1,5 +1,17 @@
 #!/bin/bash
-mpiexec -n 16 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -pc_type lu -ksp_view -pc_factor_mat_solver_package mumps
+
+mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu
+
+#mpiexec -n 8 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu -pc_factor_mat_solver_package mumps
+
+#mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 17 -ksp_view -ksp_norm_type unpreconditioned -pc_type mg -pc_mg_type full -help -da_refine_x 1 -da_refine_y 1 -da_refine_z 2 -pc_mg_levels 2 -mg_coarse_pc_type lu  -ksp_type fgmres -mg_levels_pc_sor_backward -mg_levels_ksp_max_it 2 -mg_levels_pc_sor_its 5
+
+#mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 17 -ksp_view -ksp_norm_type unpreconditioned -pc_type mg -pc_mg_type full -help -da_refine_x 1 -da_refine_y 1 -da_refine_z 2 -pc_mg_levels 2 -mg_coarse_pc_type lu -mg_levels_ksp_type fgmres -ksp_type fgmres -mg_levels_pc_sor_symmetric -mg_levels_ksp_max_it 1 -mg_levels_ksp_monitor -mg_levels_pc_sor_its 5
+
+#mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 15 -Nzeta 15 -Nxi 17 -ksp_view -ksp_norm_type unpreconditioned -pc_type mg -pc_mg_type full -help -da_refine_x 3 -da_refine_y 1 -da_refine_z 1 -pc_mg_levels 2 -mg_coarse_pc_type lu -mg_levels_ksp_type fgmres -ksp_type fgmres -mg_levels_pc_sor_backward -mg_levels_ksp_max_it 4 -mg_levels_ksp_monitor
+
+#mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type mg -pc_mg_type full -help -da_refine_x 1 -da_refine_y 1 -da_refine_z 2 -pc_mg_levels 2 -mg_coarse_pc_type lu
+
 cp mmc_rhs.dat /mnt/hostShare/
 cp mmc_matrix.dat /mnt/hostShare/
 cp mmc_soln.dat /mnt/hostShare/

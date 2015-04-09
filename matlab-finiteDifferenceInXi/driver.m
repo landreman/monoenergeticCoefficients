@@ -23,7 +23,7 @@ solutionMethod = 1;
 % 2 = GMRES with no preconditioning
 
 % **********************************************************
-% End of input parameters.
+% End of input parameters
 % **********************************************************
 
 tic
@@ -49,6 +49,5 @@ fprintf('Beginning solve.\n')
 solution = solver(problem.matrix, problem.rhs, solutionMethod);
 fprintf('Done. Time for solve: %g sec\n',toc)
 
-fprintf('Source: %g  (Should be within machine precision of 0)\n',solution(end))
 outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
 fprintf('Diagnostics: flux (L11) = %g, flow (L21) = %g.\n',outputs.flux,outputs.flow);

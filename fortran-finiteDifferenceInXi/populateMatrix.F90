@@ -32,6 +32,7 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
   PetscReal :: theta, zeta, xi
   MatNullSpace :: nullspace
   PetscReal :: dtheta, dzeta, dxi, BHere, temp
+  PetscViewer :: viewer
 
   PetscScalar :: valuesToAdd(7)
   MatStencil :: row(4), col(4,7)
@@ -47,6 +48,8 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
        PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
        PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
        PETSC_NULL_INTEGER,ierr)
+
+  print *,"[proc ",myRank,"] RHS: levelNtheta=",levelNtheta,", levelNzeta=",levelNzeta,", levelNxi=",levelNxi
 
   call DMDAGetCorners(dmda, &
        ithetaMin, izetaMin, ixiMin, &
@@ -123,13 +126,25 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
            
            ! Add mirror term:
            temp = -(0.5d+0)*(1-xi*xi)*(dBdtheta(theta,zeta)*iota + dBdzeta(theta,zeta))
-           valuesToAdd(6) =  temp/(2*dxi)
-           valuesToAdd(7) = -temp/(2*dxi)
+           if (ixi==0) then
+              ! Endpoint at xi = -1
+              valuesToAdd(1) = -temp/dxi
+              valuesToAdd(6) =  temp/dxi
+           elseif (ixi==levelNxi-1) then
+              ! Endpoint at xi = +1
+              valuesToAdd(1) =  temp/dxi
+              valuesToAdd(7) = -temp/dxi
+           else
+              ! Interior points
+              valuesToAdd(6) =  temp/(2*dxi)
+              valuesToAdd(7) = -temp/(2*dxi)
+           end if
 
            ! Add collision operator:
-           valuesToAdd(6) = valuesToAdd(6) - nu/2*(1-(xi+dxi)*(xi+dxi))/(dxi*dxi)
-           valuesToAdd(1) = nu/2*(    (1-(xi+dxi)*(xi+dxi)) + (1-(xi-dxi)*(xi-dxi))   )/(dxi*dxi)
-           valuesToAdd(7) = valuesToAdd(7) - nu/2*(1-(xi-dxi)*(xi-dxi))/(dxi*dxi)
+           valuesToAdd(6) = valuesToAdd(6) - nu/2*(1-(xi+dxi/2)*(xi+dxi/2))/(dxi*dxi)
+           valuesToAdd(1) = valuesToAdd(1) + &
+                nu/2*(    (1-(xi+dxi/2)*(xi+dxi/2)) + (1-(xi-dxi/2)*(xi-dxi/2))   )/(dxi*dxi)
+           valuesToAdd(7) = valuesToAdd(7) - nu/2*(1-(xi-dxi/2)*(xi-dxi/2))/(dxi*dxi)
 
            call MatSetValuesStencil(pcMatrix, 1, row, 7, col, valuesToAdd, INSERT_VALUES, ierr)
         end do
@@ -138,6 +153,10 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
 
   call MatAssemblyBegin(pcMatrix, MAT_FINAL_ASSEMBLY, ierr)
   call MatAssemblyEnd(pcMatrix, MAT_FINAL_ASSEMBLY, ierr)
+
+  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mmc_matrix.dat", FILE_MODE_WRITE, viewer, ierr)
+  call MatView(pcMatrix, viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
 
   ! The matrix has a 1D null space, with the null vector corresponding to a constant:
   call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr)

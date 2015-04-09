@@ -104,9 +104,9 @@ module geometry
       end if
       
       if (zetaCellCentered) then
-         zeta = (2*pi/Nperiods)*izeta/levelNzeta
-      else
          zeta = (2*pi/Nperiods)*(izeta+0.5)/levelNzeta
+      else
+         zeta = (2*pi/Nperiods)*izeta/levelNzeta
       end if
       
       ! xi is always cell-centered:

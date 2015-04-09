@@ -9,7 +9,7 @@ subroutine populateRHS(ksp, vec, userContext, ierr)
   use petscdmda
 
   use geometry
-  use variables, only: G, I, myRank
+  use variables, only: G, I, myRank, masterProc
 
   implicit none
 
@@ -41,6 +41,8 @@ subroutine populateRHS(ksp, vec, userContext, ierr)
        PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
        PETSC_NULL_INTEGER,ierr)
 
+  print *,"[proc ",myRank,"] RHS: levelNtheta=",levelNtheta,", levelNzeta=",levelNzeta,", levelNxi=",levelNxi
+
   call DMDAGetCorners(dmda, &
        ithetaMin, izetaMin, ixiMin, &
        localNtheta, localNzeta, localNxi, &
@@ -62,6 +64,32 @@ subroutine populateRHS(ksp, vec, userContext, ierr)
 
   print *,"[proc ",myRank,"] RHS: ithetaMin=",ithetaMin,", izetaMin=",izetaMin,", ixiMin=",ixiMin,&
        ", localNtheta=",localNtheta,", localNzeta=",localNzeta,", localNxi=",localNxi
+  
+  if (masterProc) then
+     print *,"Here comes theta:"
+     izeta=1
+     ixi=1
+     do itheta=ithetaMin,ithetaMax
+        call whereAmI(itheta,izeta,ixi,levelNtheta,levelNzeta,levelNxi,theta,zeta,xi)
+        print *,theta
+     end do
+
+     print *,"Here comes zeta:"
+     itheta=1
+     ixi=1
+     do izeta=izetaMin,izetaMax
+        call whereAmI(itheta,izeta,ixi,levelNtheta,levelNzeta,levelNxi,theta,zeta,xi)
+        print *,zeta
+     end do
+
+     print *,"Here comes xi:"
+     itheta=1
+     izeta=1
+     do ixi=ixiMin,ixiMax
+        call whereAmI(itheta,izeta,ixi,levelNtheta,levelNzeta,levelNxi,theta,zeta,xi)
+        print *,xi
+     end do
+  end if
 
   do itheta = ithetaMin, ithetaMax
      do izeta = izetaMin, izetaMax

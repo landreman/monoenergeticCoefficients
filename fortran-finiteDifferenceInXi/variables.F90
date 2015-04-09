@@ -14,5 +14,6 @@ module variables
   logical :: thetaCellCentered, zetaCellCentered
 
   PetscScalar, parameter :: pi = 3.14159265358979d+0
+  PetscScalar, parameter :: sqrtpi = 1.77245385090552d+0
 
 end module variables

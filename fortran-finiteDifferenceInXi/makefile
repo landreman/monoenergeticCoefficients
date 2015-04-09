@@ -5,7 +5,7 @@ EXTRA_LINK_FLAGS =
 
 TARGET = mmc
 
-OBJ_FILES = geometry.o mmc.o populateMatrix.o populateRHS.o variables.o
+OBJ_FILES = diagnostics.o geometry.o mmc.o populateMatrix.o populateRHS.o variables.o
 
 .PHONY: all clean
 
@@ -24,6 +24,7 @@ clean::
 	rm -f *.o *.mod *.a *.dat *~ $(TARGET)
 
 # Dependencies:
+diagnostics.o: variables.o
 geometry.o: variables.o
 mmc.o: variables.o
 populateMatrix.o: geometry.o variables.o

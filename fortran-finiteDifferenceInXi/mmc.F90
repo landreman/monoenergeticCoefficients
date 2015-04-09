@@ -37,12 +37,12 @@ program mmc
   masterProc = (myRank==0)
 
   ! Set defaults:
-  nu = 0.1
-  epsilon_t = -0.07053
-  epsilon_h = 0.05067
-  iota = 0.4542
-  G = 3.7481
-  I = 0
+  nu = 0.1d+0
+  epsilon_t = -0.07053d+0
+  epsilon_h = 0.05067d+0
+  iota = 0.4542d+0
+  G = 3.7481d+0
+  I = 0d+0
   Nperiods = 10
   helicity_l = 2
   Ntheta = 13
@@ -72,7 +72,7 @@ program mmc
         print *,"zetaCellCentered = false"
      end if
   end if
-  
+
   call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
 
   dof = 1
@@ -91,7 +91,9 @@ program mmc
   call KSPMonitorSet(ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
   call KSPSetFromOptions(ksp,ierr)
   call KSPSolve(ksp,PETSC_NULL_OBJECT,PETSC_NULL_OBJECT,ierr)
-  call KSPGetSolution(ksp,solution,ierr)
+
+  call diagnostics(ksp)
+
   call KSPDestroy(ksp,ierr)
   call DMDestroy(dmda,ierr)
 

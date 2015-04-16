@@ -7,7 +7,7 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
   use petscksp
 
   use geometry
-  use variables, only: nu, iota, Nperiods, myRank, pi
+  use variables, only: nu, iota, Nperiods, myRank, pi, upwindTheta, upwindZeta
 
   implicit none
 
@@ -127,27 +127,47 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
            BHere = B(theta,zeta)
 
            ! Add d/dtheta term:
-           valuesToAdd(2) =  xi*iota*BHere/(2*dtheta)
-           valuesToAdd(3) = -xi*iota*BHere/(2*dtheta)
+           if (upwindTheta) then
+              if (iota*xi>0) then
+                 valuesToAdd(1) = valuesToAdd(1) + xi*iota*BHere/dtheta
+                 valuesToAdd(3) = valuesToAdd(3) - xi*iota*BHere/dtheta
+              else
+                 valuesToAdd(1) = valuesToAdd(1) - xi*iota*BHere/dtheta
+                 valuesToAdd(2) = valuesToAdd(2) + xi*iota*BHere/dtheta
+              end if
+           else
+              valuesToAdd(2) = valuesToAdd(2) + xi*iota*BHere/(2*dtheta)
+              valuesToAdd(3) = valuesToAdd(3) - xi*iota*BHere/(2*dtheta)
+           end if
 
            ! Add d/dzeta term:
-           valuesToAdd(4) =  xi*BHere/(2*dzeta)
-           valuesToAdd(5) = -xi*BHere/(2*dzeta)
-           
+           if (upwindZeta) then
+              if (xi>0) then
+                 valuesToAdd(1) = valuesToAdd(1) + xi*BHere/dzeta
+                 valuesToAdd(5) = valuesToAdd(5) - xi*BHere/dzeta
+              else
+                 valuesToAdd(1) = valuesToAdd(1) - xi*BHere/dzeta
+                 valuesToAdd(4) = valuesToAdd(4) + xi*BHere/dzeta
+              end if
+           else
+              valuesToAdd(4) = valuesToAdd(4) + xi*BHere/(2*dzeta)
+              valuesToAdd(5) = valuesToAdd(5) - xi*BHere/(2*dzeta)
+           end if
+
            ! Add mirror term:
            temp = -(0.5d+0)*(1-xi*xi)*(dBdtheta(theta,zeta)*iota + dBdzeta(theta,zeta))
            if (ixi==0) then
               ! Endpoint at xi = -1
-              valuesToAdd(1) = -temp/dxi
-              valuesToAdd(6) =  temp/dxi
+              valuesToAdd(1) = valuesToAdd(1) - temp/dxi
+              valuesToAdd(6) = valuesToAdd(6) + temp/dxi
            elseif (ixi==levelNxi-1) then
               ! Endpoint at xi = +1
-              valuesToAdd(1) =  temp/dxi
-              valuesToAdd(7) = -temp/dxi
+              valuesToAdd(1) = valuesToAdd(1) + temp/dxi
+              valuesToAdd(7) = valuesToAdd(7) - temp/dxi
            else
               ! Interior points
-              valuesToAdd(6) =  temp/(2*dxi)
-              valuesToAdd(7) = -temp/(2*dxi)
+              valuesToAdd(6) = valuesToAdd(6) + temp/(2*dxi)
+              valuesToAdd(7) = valuesToAdd(7) - temp/(2*dxi)
            end if
 
            ! Add collision operator:

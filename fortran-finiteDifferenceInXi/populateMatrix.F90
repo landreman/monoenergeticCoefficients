@@ -7,7 +7,7 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
   use petscksp
 
   use geometry
-  use variables, only: nu, iota, Nperiods, myRank, pi, upwindTheta, upwindZeta
+  use variables, only: nu, iota, Nperiods, myRank, pi, upwindTheta, upwindZeta, upwindInPCOnly
 
   implicit none
 
@@ -34,10 +34,15 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
   PetscReal :: dtheta, dzeta, dxi, BHere, temp
   PetscViewer :: viewer
 
-  PetscScalar :: valuesToAdd(7)
+  PetscScalar :: valuesToAdd(7), valuesToAdd2(7)
   MatStencil :: row(4), col(4,7)
 
   print *,"[",myRank,"] Entering populateMatrix"
+
+  if (upwindInPCOnly) then
+     print *,"upwindInPCOnly is true!"
+     stop
+  end if
 
   call KSPGetDM(ksp,dmda,ierr)
 
@@ -121,10 +126,14 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
               col(MatStencil_k,7) = ixi-1
            end if
 
-           valuesToAdd = 0
-
            call whereAmI(itheta,izeta,ixi,levelNtheta,levelNzeta,levelNxi,theta,zeta,xi)
            BHere = B(theta,zeta)
+
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+           ! Preconditioner
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+
+           valuesToAdd = 0.0d+0
 
            ! Add d/dtheta term:
            if (upwindTheta) then
@@ -177,12 +186,58 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
            valuesToAdd(7) = valuesToAdd(7) - nu/2*(1-(xi-dxi/2)*(xi-dxi/2))/(dxi*dxi)
 
            call MatSetValuesStencil(pcMatrix, 1, row, 7, col, valuesToAdd, ADD_VALUES, ierr)
+
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+           ! "Real" matrix
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+
+           valuesToAdd2 = 0.0d+0
+
+           ! Add d/dtheta term:
+           valuesToAdd2(2) = valuesToAdd2(2) + xi*iota*BHere/(2*dtheta)
+           valuesToAdd2(3) = valuesToAdd2(3) - xi*iota*BHere/(2*dtheta)
+          
+           ! Add d/dzeta term:
+           valuesToAdd2(4) = valuesToAdd2(4) + xi*BHere/(2*dzeta)
+           valuesToAdd2(5) = valuesToAdd2(5) - xi*BHere/(2*dzeta)
+
+           ! Add mirror term:
+           temp = -(0.5d+0)*(1-xi*xi)*(dBdtheta(theta,zeta)*iota + dBdzeta(theta,zeta))
+           if (ixi==0) then
+              ! Endpoint at xi = -1
+              valuesToAdd2(1) = valuesToAdd2(1) - temp/dxi
+              valuesToAdd2(6) = valuesToAdd2(6) + temp/dxi
+           elseif (ixi==levelNxi-1) then
+              ! Endpoint at xi = +1
+              valuesToAdd2(1) = valuesToAdd2(1) + temp/dxi
+              valuesToAdd2(7) = valuesToAdd2(7) - temp/dxi
+           else
+              ! Interior points
+              valuesToAdd2(6) = valuesToAdd2(6) + temp/(2*dxi)
+              valuesToAdd2(7) = valuesToAdd2(7) - temp/(2*dxi)
+           end if
+
+           ! Add collision operator:
+           valuesToAdd2(6) = valuesToAdd2(6) - nu/2*(1-(xi+dxi/2)*(xi+dxi/2))/(dxi*dxi)
+           valuesToAdd2(1) = valuesToAdd2(1) + &
+                nu/2*(    (1-(xi+dxi/2)*(xi+dxi/2)) + (1-(xi-dxi/2)*(xi-dxi/2))   )/(dxi*dxi)
+           valuesToAdd2(7) = valuesToAdd2(7) - nu/2*(1-(xi-dxi/2)*(xi-dxi/2))/(dxi*dxi)
+
+           if (upwindInPCOnly) then
+              !stop
+              call MatSetValuesStencil(matrix, 1, row, 7, col, valuesToAdd2, ADD_VALUES, ierr)
+           end if
         end do
      end do
   end do
 
   call MatAssemblyBegin(pcMatrix, MAT_FINAL_ASSEMBLY, ierr)
   call MatAssemblyEnd(pcMatrix, MAT_FINAL_ASSEMBLY, ierr)
+
+!!$  if (upwindInPCOnly) then
+!!$     call MatAssemblyBegin(matrix, MAT_FINAL_ASSEMBLY, ierr)
+!!$     call MatAssemblyEnd(matrix, MAT_FINAL_ASSEMBLY, ierr)
+!!$  end if
 
   call PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mmc_matrix.dat", FILE_MODE_WRITE, viewer, ierr)
   call MatView(pcMatrix, viewer, ierr)
@@ -191,6 +246,9 @@ subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
   ! The matrix has a 1D null space, with the null vector corresponding to a constant:
   call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr)
   call MatSetNullSpace(pcMatrix,nullspace,ierr)
+!!$  if (upwindInPCOnly) then
+!!$     call MatSetNullSpace(matrix,nullspace,ierr)
+!!$  end if
   call MatNullSpaceDestroy(nullspace,ierr)
 
 end subroutine populateMatrix

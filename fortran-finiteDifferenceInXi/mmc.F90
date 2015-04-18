@@ -52,6 +52,7 @@ program mmc
   zetaCellCentered = .true.
   upwindTheta = .false.
   upwindZeta = .false.
+  upwindInPCOnly = .false.
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
@@ -60,6 +61,7 @@ program mmc
   call PetscOptionsGetBool(PETSC_NULL_CHARACTER, '-zetaCellCentered', zetaCellCentered, wasSet, ierr)
   call PetscOptionsGetBool(PETSC_NULL_CHARACTER, '-upwindTheta', upwindTheta, wasSet, ierr)
   call PetscOptionsGetBool(PETSC_NULL_CHARACTER, '-upwindZeta', upwindZeta, wasSet, ierr)
+  call PetscOptionsGetBool(PETSC_NULL_CHARACTER, '-upwindInPCOnly', upwindInPCOnly, wasSet, ierr)
 
   if (masterProc) then
      print *,"Ntheta = ",Ntheta
@@ -84,6 +86,11 @@ program mmc
         print *,"upwindZeta = true"
      else
         print *,"upwindZeta = false"
+     end if
+     if (upwindInPCOnly) then 
+        print *,"upwindInPCOnly = true"
+     else
+        print *,"upwindInPCOnly = false"
      end if
   end if
 

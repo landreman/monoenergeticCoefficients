@@ -12,7 +12,7 @@ module variables
   PetscInt :: myRank, numProcs
   logical :: masterProc
   logical :: thetaCellCentered, zetaCellCentered
-  logical :: upwindTheta, upwindZeta
+  logical :: upwindTheta, upwindZeta, upwindInPCOnly
 
   PetscScalar, parameter :: pi = 3.14159265358979d+0
   PetscScalar, parameter :: sqrtpi = 1.77245385090552d+0

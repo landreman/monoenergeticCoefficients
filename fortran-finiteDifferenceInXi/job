@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # No upwinding, direct solver:
-#mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu
+mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu
 
 # Upwinding, direct solver:
 #mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu -upwindTheta -upwindZeta 
@@ -36,7 +36,7 @@
 
 # Upwind only in zeta, not theta:
 # 79 iterations:
-mpiexec -n 1 ./mmc -ksp_max_it 2000 -options_left -Ntheta 23 -Nzeta 25 -Nxi 26 -ksp_view -pc_type gamg -ksp_type fgmres -ksp_gmres_restart 500 -help -pc_gamg_verbose 1 -upwindZeta  -pc_gamg_sym_graph true
+#mpiexec -n 1 ./mmc -ksp_max_it 2000 -options_left -Ntheta 23 -Nzeta 25 -Nxi 26 -ksp_view -pc_type gamg -ksp_type fgmres -ksp_gmres_restart 500 -help -pc_gamg_verbose 1 -upwindZeta  -pc_gamg_sym_graph true
 
 # Upwinding, gamg, 4 procs, higher resolution
 # 103 iterations:

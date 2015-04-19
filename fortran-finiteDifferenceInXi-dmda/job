@@ -1,10 +1,22 @@
 #!/bin/bash
 
 # No upwinding, direct solver:
-#mpiexec -n 1 ./mmc -ksp_max_it 20 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu -ksp_norm_type unpreconditioned | tee output
-#mpiexec -n 1 ./mmc -ksp_max_it 20 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu -ksp_norm_type unpreconditioned -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 2 | tee output
-mpiexec -n 1 ./mmc -ksp_max_it 20 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu -ksp_norm_type unpreconditioned -thetaGridScheme 1 -thetaGridScheme_pc 1 -zetaGridScheme 1 -zetaGridScheme_pc 1 | tee output
-#mpiexec -n 1 ./mmc -ksp_max_it 20 -options_left -Ntheta 23 -Nzeta 25 -Nxi 26 -ksp_view -pc_type lu -ksp_norm_type unpreconditioned | tee output
+mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu
+
+# Upwinding, direct solver:
+#mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type lu -upwindTheta -upwindZeta 
+
+# No upwinding, no pc:
+# Even with no pc at all, gmres converges in 496 iterations:
+#mpiexec -n 1 ./mmc -ksp_max_it 500 -ksp_gmres_restart 500 -pc_type none -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view
+
+# Upwinding, no pc:
+# Even with no pc at all, gmres converges in 278 iterations:
+#mpiexec -n 1 ./mmc -ksp_max_it 500 -ksp_gmres_restart 500 -pc_type none -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -upwindTheta -upwindZeta 
+
+# No upwinding, gamg:
+# Not converging at all.
+#mpiexec -n 1 ./mmc -ksp_max_it 2000 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type gamg -ksp_type fgmres -ksp_gmres_restart 500 -help -pc_gamg_verbose 1  -pc_gamg_sym_graph true
 
 # Upwinding, gamg, 1 proc
 # 19 iterations!
@@ -92,7 +104,6 @@ mpiexec -n 1 ./mmc -ksp_max_it 20 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ks
 #mpiexec -n 1 ./mmc -ksp_max_it 10 -options_left -Ntheta 13 -Nzeta 15 -Nxi 16 -ksp_view -pc_type mg -pc_mg_type full -help -da_refine_x 1 -da_refine_y 1 -da_refine_z 2 -pc_mg_levels 2 -mg_coarse_pc_type lu
 
 cp mmc_rhs.dat /mnt/hostShare/
-cp mmc_matrix_0.dat /mnt/hostShare/
-cp mmc_matrix_1.dat /mnt/hostShare/
+cp mmc_matrix.dat /mnt/hostShare/
 cp mmc_soln.dat /mnt/hostShare/
 

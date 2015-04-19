@@ -57,7 +57,7 @@
 
 # pc same as main matrix. Using LU:
 # 12 iterations
-mpiexec -n 2 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type lu -pc_factor_mat_solver_package mumps -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 3 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+#mpiexec -n 2 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type lu -pc_factor_mat_solver_package mumps -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 3 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
 
 # pc same as main matrix. Using gamg:
 # >>> 500 iterations, 3 levels
@@ -90,6 +90,96 @@ mpiexec -n 2 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left
 # pc same as main matrix. Using ilu(2):
 # 419 (318) iterations
 #mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 700 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type ilu -pc_factor_levels 2 -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 3 -zetaGridScheme 2 -zetaGridScheme_pc 3 -help |tee output
+
+##################################################################################################################
+# Experiments with -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3, -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 
+# flux =  -3.96135098094366964E-002 , flow =  -0.23824109835208968 
+##################################################################################################################
+
+# pc same as main matrix. Using LU:
+# 11 iterations
+#mpiexec -n 2 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type lu -pc_factor_mat_solver_package mumps -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using gamg:
+# >>500 iterations, 3 levels
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type gamg -ksp_type fgmres -ksp_gmres_restart 2000 -help -pc_gamg_verbose 1 -pc_gamg_sym_graph true -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using jacobi:
+# >>500 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type jacobi -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 -help |tee output
+
+# pc same as main matrix. Using SOR:
+# 474 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type sor -ksp_type fgmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using SOR, -n 4
+# 501 iterations
+#mpiexec -n 4 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 1000 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type sor -ksp_type fgmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using ilu(0):
+# 470 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 700 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type ilu -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using ilu(1):
+# 444 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 700 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type ilu -pc_factor_levels 1 -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 -help |tee output
+
+# pc same as main matrix. Using ilu(2):
+# 429 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 700 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type ilu -pc_factor_levels 2 -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 2 -zetaGridScheme_pc 3 -help |tee output
+##################################################################################################################
+# Experiments with -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3, -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 
+# flux =  -3.85403605364640495E-002 , flow =  -0.19714338006112439
+##################################################################################################################
+
+# pc same as main matrix. Using LU:
+# 1 iteration
+#mpiexec -n 2 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type lu -pc_factor_mat_solver_package mumps -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using gamg:
+# 437 iterations, 3 levels
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type gamg -ksp_type fgmres -ksp_gmres_restart 2000 -help -pc_gamg_verbose 1 -pc_gamg_sym_graph true -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using jacobi:
+# >500 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type jacobi -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 -help |tee output
+
+# pc same as main matrix. Using SOR:
+# 200 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 500 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type sor -ksp_type fgmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using SOR, -n 4
+# 229 iterations
+#mpiexec -n 4 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 1000 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type sor -ksp_type fgmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using ilu(0):
+# 192 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 700 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type ilu -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using ilu(1):
+# 195 iterations
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 700 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type ilu -pc_factor_levels 1 -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 -help |tee output
+
+# pc same as main matrix. Using ilu(2):
+# 186 iterations
+mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 700 -options_left -Ntheta 19 -Nzeta 45 -Nxi 46 -nu 0.01 -ksp_view -pc_type ilu -pc_factor_levels 2 -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 2 -zetaGridScheme 3 -zetaGridScheme_pc 3 -help |tee output
+
+##################################################################################################################
+# Experiments with pc != main matrix, -Ntheta 25 -Nzeta 99 -Nxi 100 -nu 0.0001 
+#
+##################################################################################################################
+
+# pc same as main matrix. Using SOR:
+# Not converging well at all
+#mpiexec -n 2 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 2000 -options_left -Ntheta 25 -Nzeta 99 -Nxi 100 -nu 0.0001 -ksp_view -pc_type sor -ksp_type fgmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 3 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using ilu(0):
+# Making some progress but very slow.
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 2000 -options_left -Ntheta 25 -Nzeta 99 -Nxi 100 -nu 0.0001 -ksp_view -pc_type ilu -ksp_type gmres -ksp_gmres_restart 2000 -help -thetaGridScheme 2 -thetaGridScheme_pc 3 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
+
+# pc same as main matrix. Using ilu(8):
+# Residual is steadily coming down, but still slow.
+#mpiexec -n 1 ./mmc -ksp_norm_type unpreconditioned -ksp_max_it 2000 -options_left -Ntheta 25 -Nzeta 99 -Nxi 100 -nu 0.0001 -ksp_view -pc_type ilu -pc_factor_levels 8 -ksp_type gmres -ksp_gmres_restart 200 -help -thetaGridScheme 2 -thetaGridScheme_pc 3 -zetaGridScheme 2 -zetaGridScheme_pc 3 |tee output
 
 ##################################################################################################################
 

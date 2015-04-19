@@ -103,6 +103,8 @@ subroutine uniformDiffMatrices(N, xMin, xMax, scheme, x, weights, ddx, d2dx2)
   end if
   if (xMin > xMax) then 
      print *,"Error! xMax must be larger than xMin"
+     print *,"xMin=",xMin
+     print *,"xMax=",xMax
      stop 
   end if
   if (xMin == xMax) then 

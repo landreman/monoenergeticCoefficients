@@ -40,47 +40,44 @@ subroutine createGrids()
   allocate(ddtheta_preconditioner_negativeXi(Ntheta,Ntheta))
   allocate(d2dtheta2(Ntheta,Ntheta))
 
-  print *,"000"
   select case (thetaGridScheme)
   case (1)
      scheme = 0
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta, thetaWeights, ddtheta_positiveXi, d2dtheta2)
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta, thetaWeights, ddtheta_positiveXi, d2dtheta2)
      ddtheta_negativeXi = ddtheta_positiveXi
   case (2)
      scheme = 10
-     print *,"123"
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta, thetaWeights, ddtheta_positiveXi, d2dtheta2)
-     print *,"456"
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta, thetaWeights, ddtheta_positiveXi, d2dtheta2)
      ddtheta_negativeXi = ddtheta_positiveXi
   case (3)
      scheme = 30
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta, thetaWeights, ddtheta_positiveXi, d2dtheta2)
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta, thetaWeights, ddtheta_positiveXi, d2dtheta2)
      scheme = 40
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta, thetaWeights, ddtheta_negativeXi, d2dtheta2)
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta, thetaWeights, ddtheta_negativeXi, d2dtheta2)
   case default
      stop "Error! Invalid thetaGridScheme!"
   end select
-  print *,"AAA"
+
   select case (thetaGridScheme_pc)
   case (1)
      scheme = 0
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_positiveXi, d2dtheta2)
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_positiveXi, d2dtheta2)
      ddtheta_preconditioner_negativeXi = ddtheta_preconditioner_positiveXi
   case (2)
      scheme = 10
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_positiveXi, d2dtheta2)
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_positiveXi, d2dtheta2)
      ddtheta_preconditioner_negativeXi = ddtheta_preconditioner_positiveXi
   case (3)
      scheme = 30
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_positiveXi, d2dtheta2)
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_positiveXi, d2dtheta2)
      scheme = 40
-     call uniformDiffMatrices(Ntheta, 0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_negativeXi, d2dtheta2)
+     call uniformDiffMatrices(Ntheta, 0.0d+0, 2*pi, scheme, theta_preconditioner, thetaWeights_preconditioner, ddtheta_preconditioner_negativeXi, d2dtheta2)
   case default
      stop "Error! Invalid thetaGridScheme_pc!"
   end select
 
   deallocate(theta_preconditioner, thetaWeights_preconditioner, d2dtheta2)
-  print *,"BBB"
+
   ! *****************************************************
   ! Set up zeta grid
   ! *****************************************************
@@ -100,39 +97,39 @@ subroutine createGrids()
   select case (zetaGridScheme)
   case (1)
      scheme = 0
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta, zetaWeights, ddzeta_positiveXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta, zetaWeights, ddzeta_positiveXi, d2dzeta2)
      ddzeta_negativeXi = ddzeta_positiveXi
   case (2)
      scheme = 10
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta, zetaWeights, ddzeta_positiveXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta, zetaWeights, ddzeta_positiveXi, d2dzeta2)
      ddzeta_negativeXi = ddzeta_positiveXi
   case (3)
      scheme = 30
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta, zetaWeights, ddzeta_positiveXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta, zetaWeights, ddzeta_positiveXi, d2dzeta2)
      scheme = 40
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta, zetaWeights, ddzeta_negativeXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta, zetaWeights, ddzeta_negativeXi, d2dzeta2)
   case default
      stop "Error! Invalid zetaGridScheme!"
   end select
-  print *,"CCC"
+
   select case (zetaGridScheme_pc)
   case (1)
      scheme = 0
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_positiveXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_positiveXi, d2dzeta2)
      ddzeta_preconditioner_negativeXi = ddzeta_preconditioner_positiveXi
   case (2)
      scheme = 10
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_positiveXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_positiveXi, d2dzeta2)
      ddzeta_preconditioner_negativeXi = ddzeta_preconditioner_positiveXi
   case (3)
      scheme = 30
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_positiveXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_positiveXi, d2dzeta2)
      scheme = 40
-     call uniformDiffMatrices(Nzeta, 0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_negativeXi, d2dzeta2)
+     call uniformDiffMatrices(Nzeta, 0.0d+0, zetaMax, scheme, zeta_preconditioner, zetaWeights_preconditioner, ddzeta_preconditioner_negativeXi, d2dzeta2)
   case default
      stop "Error! Invalid zetaGridScheme_pc!"
   end select
-  print *,"DDD"
+
   deallocate(zeta_preconditioner, zetaWeights_preconditioner, d2dzeta2)
 
   ! *****************************************************

@@ -165,9 +165,9 @@ subroutine populateMatrix(matrix, whichMatrix)
   call MatAssemblyEnd(matrix, MAT_FINAL_ASSEMBLY, ierr)
 
   ! The matrix has a 1D null space, with the null vector corresponding to a constant:
-!  call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr)
-!  call MatSetNullSpace(matrix,nullspace,ierr)
-!  call MatNullSpaceDestroy(nullspace,ierr)
+  call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr)
+  call MatSetNullSpace(matrix,nullspace,ierr)
+  call MatNullSpaceDestroy(nullspace,ierr)
 
   write (filename,fmt="(a,i1,a)") "mmc_matrix_",whichMatrix,".dat"
   call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+mpiexec -n 1 ./mmc -options_left -ksp_view
+
+#mpiexec -n 3 ./mmc -options_left -ksp_view -pc_factor_mat_solver_package mumps

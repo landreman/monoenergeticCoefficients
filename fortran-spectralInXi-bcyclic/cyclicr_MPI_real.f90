@@ -1448,256 +1448,256 @@ END FUNCTION GetLastBlockRow
       END MODULE CYCLIC_RED
 
 
-      PROGRAM CYCLICR
-      USE stel_kinds
-      USE CYCLIC_RED
-      IMPLICIT NONE
-      INTEGER, PARAMETER        :: NBLOCKS=256
-      INTEGER, PARAMETER        :: MBLOCK_SIZE=4000
-      INTEGER                   :: ns, mblock, istat, k, nmin, irhs
-      INTEGER, POINTER          :: ipivot(:,:)
-      REAL(rprec), ALLOCATABLE,  TARGET, DIMENSION(:,:,:) ::                     &
-                   lblk, dblk, ublk, lblk1, dblk1, ublk1
-      REAL(rprec), ALLOCATABLE, TARGET  :: brhs(:,:), gc(:,:)
-      REAL(rprec)  :: t1, rms_error
-!******************************************
-!
-!  mpi setup calls: 
-!
-!DEC$ IF DEFINED (MPI_OPT)
-      INTEGER          :: ierr
-      CALL MPI_INIT( ierr )
-      CALL MPI_COMM_RANK( MPI_COMM_WORLD, rank, ierr )       !mpi stuff
-      CALL MPI_COMM_size( MPI_COMM_WORLD, numtasks, ierr )   !mpi stuff
-      if (rank==0) then
-         print *,"Using MPI with ",numtasks," procs."
-      end if
-!DEC$ ELSE
-      print *,"NOT using MPI."
-!DEC$ ENDIF      
-
-      mblock = MBLOCK_SIZE
-      ns = NBLOCKS
-!******************************************
-!
-!I.   DO SERIAL THOMAS FOR TIMING COMPARISON (SKIP IF BLOCKS ARE TOO LARGE)
-
-      IF (MBLOCK_SIZE .le. 300) CALL SERIAL_THOMAS_TEST(mblock, ns)
-
-!II.  DO CYCLIC REDUCTION
-!     IMPORTANT: THE BLOCKS AND DATA ARE ASSUMED TO BE DISTRIBUTED CONSECUTIVELY
-!                ON NODES AS DESCRIBED IN THE PAPER ....
-
-!*****************************************
-      nsn = ns
-      ns0 = 1
-!DEC$ IF DEFINED (MPI_OPT)
-      nblk_rows = ns
-      ns0 = GetFirstBlockRow(rank, ns, 1)
-      nsn = GetLastBlockRow(rank, ns, 1)
-      print *,"Proc ",rank," handles block rows ",ns0," through ",nsn
-      IF (rank .eq. 0) THEN
-         WRITE (6, 100) mblock, ns
- 100     FORMAT (2x,'BLOCK SIZE: ',i5,' BLOCK ROWS: ',i5)
-      END IF
-!DEC$ ENDIF
-
-!     NOTE: IN PRODUCTION RUN, SKIP THIS SINCE ipivot, lblk, dblk, ublk, brhs ARE
-!           KNOWN INPUTS
-	  ALLOCATE (lblk(mblock,mblock,ns0:nsn), dblk(mblock,mblock,ns0:nsn),   &
-                ublk(mblock,mblock,ns0:nsn), brhs(mblock,ns0:nsn),          &
-				ipivot(mblock, ns0:nsn), stat=istat)
-	  IF (istat .ne. 0) STOP 'Allocation error!'
-      CALL INITIALIZE_BLOCKS (lblk, dblk, ublk, brhs, mblock)
-
-!     STORE lblk1, ETC ONLY FOR BACK-SOLVER CHECK
-      ALLOCATE (lblk1(mblock,mblock,ns0:nsn), dblk1(mblock,mblock,ns0:nsn),   &
-                ublk1(mblock,mblock,ns0:nsn), gc(mblock,ns0:nsn),             &
-                stat=istat)
-      IF (istat .ne. 0) STOP 'Allocation error!'
-
-      lblk1 = lblk; dblk1 = dblk; ublk1 = ublk
-      gc = brhs
-!*****************************************
-
-!     SIMULATE MULTIPLE RHS
-      MULTIPLE_RHS: DO irhs = 1, 2
-
-!     SOLVE USING CYCLIC REDUCTION
-!     SOLUTION OVERWRITE brhs ON EACH PROCESSOR
-!DEC$ IF DEFINED (MPI_OPT)
-      IF (rank .eq. 0) PRINT '(/,a,i1,/)',' SOLUTION RHS #',irhs
-!DEC$ ELSE
-      PRINT '(/,a,i1,/)',' SOLUTION RHS #',irhs
-!DEC$ ENDIF
-      CALL BCYCLIC_SOLVER (lblk, dblk, ublk, ipivot, brhs, mblock, ns)
-
-!     CHECK SOLUTION
-      CALL CHECK_SOLVER (lblk1, dblk1, ublk1, brhs, gc, mblock, ns, irhs)
-
-!     IMPORTANT: DO NOT RESET FACTORED BLOCKS
-!     RESET brhs (SOLUTION) TO INITIAL VALUE
-      brhs(:,ns0:nsn)=gc(:,ns0:nsn)
-
-      END DO MULTIPLE_RHS
-
-!     CLEAN UP ALLOCATED ARRAYS
-      CALL ClearStorage
-      DEALLOCATE (ipivot, lblk, dblk, ublk, brhs, stat=istat)
-      DEALLOCATE (lblk1, ublk1, dblk1, gc, stat=istat)
-
-!     SHUT DOWN MPI 
-!DEC$ IF DEFINED (MPI_OPT)
-      CALL MPI_BARRIER(MPI_COMM_WORLD, ierr)
-      PRINT 200,'PID: ',rank,' INIT MEMORY (Mb): ', init_memory/1E6,  &
-                             ' ADDED MEMORY (Mb): ', added_memory/1E6
- 200  FORMAT(a,i5,2(a,f10.3))
-      CALL MPI_FINALIZE(ierr)
-!DEC$ ENDIF
-
-      END PROGRAM CYCLICR
-
-      
-	  SUBROUTINE SERIAL_THOMAS_TEST (mblock, ns)
-      USE stel_kinds
-      USE CYCLIC_RED
-      IMPLICIT NONE
-      INTEGER, INTENT(in)            :: ns, mblock
-      INTEGER                        :: istat, k, nmin, irhs
-      INTEGER, TARGET, ALLOCATABLE   :: ipivot(:,:)
-      REAL(rprec), ALLOCATABLE, TARGET, DIMENSION(:,:,:) ::                     &
-                   lblk, dblk, ublk, lblk1, dblk1, ublk1
-      REAL(rprec), ALLOCATABLE, TARGET   :: brhs(:,:), gc(:,:)
-	  INTEGER, ALLOCATABLE           :: seed(:)
-	  REAL(rprec)                    :: rms_error, t1
-!******************************************
-!DEC$ IF DEFINED (MPI_OPT)
-      IF (rank .ne. 0) RETURN
-!DEC$ ENDIF      
-
-      CALL SYSTEM_CLOCK(timeon, countRate)
-
-!******************************************
-!      OPEN(UNIT=33, FILE='TEST_CYCLICR2.bin', FORM='UNFORMATTED',         &
-!     &     STATUS='OLD', IOSTAT=istat)
-
-!      IF (istat .ne. 0) STOP 'FILE NOT READ'
-!      READ (33, iostat=istat) ns, mblock
-!      IF (istat .ne. 0) STOP 'Read error!'
-!      IF (ns .ne. nblocks .or. mblock .ne. mblock_size) STOP 'Wrong dimensions!'
-!      nmin = MIN(ns, 101)
-
-	  ns0 = 1
-	  nsn = ns
-
-      ALLOCATE (ipivot(mblock, ns), stat=istat)
-      ALLOCATE (lblk(mblock,mblock,ns), dblk(mblock,mblock,ns),   &
-                ublk(mblock,mblock,ns), lblk1(mblock,mblock,ns),  &
-                ublk1(mblock,mblock,ns), dblk1(mblock,mblock,ns), &
-                brhs(mblock,ns), gc(mblock,ns), stat = istat)
-
-!     RANDOM ELEMENTS
-
-      CALL RANDOM_SEED(size=k)
-      ALLOCATE(SEED(k), stat=istat)
-      IF (istat .ne. 0) STOP 'Allocation error for SEED!'
-
-      SEED = 12345
-      CALL RANDOM_SEED(PUT=SEED)
-
-      CALL RANDOM_NUMBER(lblk)
-      lblk(:,:,ns0:nsn)=-1 + 0.25*lblk(:,:,ns0:nsn)
-
-      CALL RANDOM_NUMBER(dblk)
-      dblk(:,:,ns0:nsn)=2 + .5*dblk(:,:,ns0:nsn)
-
-      CALL RANDOM_NUMBER(ublk)
-      ublk(:,:,ns0:nsn)=-1 + 0.25*ublk(:,:,ns0:nsn)
-
-      CALL RANDOM_NUMBER(brhs)
-
-      DEALLOCATE (seed)
-
-      CALL SYSTEM_CLOCK(timeoff, countRate)
-      PRINT *,' TIME TO CREATE RANDOM DATA: ', REAL(timeoff-timeon)/countRate,' s'
-
-!I.   WITHOUT CYCLIC REDUCTION
-      gc = brhs
-      lblk1 = lblk; dblk1 = dblk; ublk1 = ublk
-
-      CALL SYSTEM_CLOCK(timeon)
-      CALL THOMAS_FACTOR(lblk, dblk, ublk, ipivot)
-      CALL THOMAS_SOLVE(lblk, dblk, ublk, brhs, ipivot)
-      CALL SYSTEM_CLOCK(timeoff)
-      DO istat = 1,ns
-      DO k = 1,mblock
-      WRITE (33, 100) istat, k, brhs(k,istat)
-      END DO
-      END DO
-
- 100  FORMAT(2i5,1pe12.4)
-
-!Ia.  BACKSOLVE: CHECK SOLUTION
-      rms_error = 0
-      DO istat = 1,ns
-         DO k = 1,mblock
-            IF (istat .eq. 1) THEN
-               t1 = SUM(dblk1(k,:,istat)*brhs(:,istat) + ublk1(k,:,istat)*brhs(:,istat+1))
-            ELSE IF (istat .eq. ns) THEN
-               t1 = SUM(lblk1(k,:,istat)*brhs(:,istat-1) + dblk1(k,:,istat)*brhs(:,istat))
-            ELSE
-               t1 = SUM(lblk1(k,:,istat)*brhs(:,istat-1) + dblk1(k,:,istat)*brhs(:,istat)  &
-     &         + ublk1(k,:,istat)*brhs(:,istat+1))
-            END IF
-            rms_error = rms_error + (gc(k,istat)-t1)**2
-         END DO
-      END DO
-
-      PRINT *,' rms_error: ', SQRT(rms_error/(ns*mblock)),    &
-     &    ' THOMAS SOLVE(s): ',REAL(timeoff-timeon)/countRate
-
-      DEALLOCATE (ipivot, lblk, dblk, ublk, lblk1, dblk1, ublk1, brhs, stat=istat)
-	  DEALLOCATE (gc)
-
-	  END SUBROUTINE SERIAL_THOMAS_TEST
-
-      SUBROUTINE INITIALIZE_BLOCKS(lblk, dblk, ublk, brhs, mblock)
-      USE stel_kinds
-!DEC$ IF DEFINED (MPI_OPT)
-      USE CYCLIC_RED, ONLY: rank, ns0, nsn
-!DEC$ ELSE
-      USE CYCLIC_RED, ONLY: ns0, nsn
-!DEC$ ENDIF
-      IMPLICIT NONE
-      INTEGER, INTENT(in)      :: mblock
-      REAL(rprec), DIMENSION(mblock,mblock,ns0:nsn), INTENT(out) :: lblk, dblk, ublk
-      REAL(rprec), INTENT(out) :: brhs(mblock,ns0:nsn)
-      INTEGER                  :: istat, k
-	  INTEGER, ALLOCATABLE   :: seed(:)
-      
-      CALL RANDOM_SEED(size=k)
-      ALLOCATE(SEED(k), stat=istat)
-      IF (istat .ne. 0) STOP 'Allocation error for SEED!'
-
-      SEED = 12345
-!DEC$ IF DEFINED (MPI_OPT)
-      SEED = SEED + 10*rank
-!DEC$ ENDIF
-      CALL RANDOM_SEED(PUT=SEED)
-
-      CALL RANDOM_NUMBER(lblk)
-      lblk=-1 + 0.5*(.5-lblk)
-
-      CALL RANDOM_NUMBER(dblk)
-      dblk= 2 + (.5-dblk)
-
-      CALL RANDOM_NUMBER(ublk)
-      ublk=-1 + 0.5*(.5-ublk)
-
-      CALL RANDOM_NUMBER(brhs)
-	  brhs = 2*(.5-brhs)
-
-      DEALLOCATE (seed)
-
-	  END SUBROUTINE INITIALIZE_BLOCKS
-
+!!$      PROGRAM CYCLICR
+!!$      USE stel_kinds
+!!$      USE CYCLIC_RED
+!!$      IMPLICIT NONE
+!!$      INTEGER, PARAMETER        :: NBLOCKS=256
+!!$      INTEGER, PARAMETER        :: MBLOCK_SIZE=4000
+!!$      INTEGER                   :: ns, mblock, istat, k, nmin, irhs
+!!$      INTEGER, POINTER          :: ipivot(:,:)
+!!$      REAL(rprec), ALLOCATABLE,  TARGET, DIMENSION(:,:,:) ::                     &
+!!$                   lblk, dblk, ublk, lblk1, dblk1, ublk1
+!!$      REAL(rprec), ALLOCATABLE, TARGET  :: brhs(:,:), gc(:,:)
+!!$      REAL(rprec)  :: t1, rms_error
+!!$!******************************************
+!!$!
+!!$!  mpi setup calls: 
+!!$!
+!!$!DEC$ IF DEFINED (MPI_OPT)
+!!$      INTEGER          :: ierr
+!!$      CALL MPI_INIT( ierr )
+!!$      CALL MPI_COMM_RANK( MPI_COMM_WORLD, rank, ierr )       !mpi stuff
+!!$      CALL MPI_COMM_size( MPI_COMM_WORLD, numtasks, ierr )   !mpi stuff
+!!$      if (rank==0) then
+!!$         print *,"Using MPI with ",numtasks," procs."
+!!$      end if
+!!$!DEC$ ELSE
+!!$      print *,"NOT using MPI."
+!!$!DEC$ ENDIF      
+!!$
+!!$      mblock = MBLOCK_SIZE
+!!$      ns = NBLOCKS
+!!$!******************************************
+!!$!
+!!$!I.   DO SERIAL THOMAS FOR TIMING COMPARISON (SKIP IF BLOCKS ARE TOO LARGE)
+!!$
+!!$      IF (MBLOCK_SIZE .le. 300) CALL SERIAL_THOMAS_TEST(mblock, ns)
+!!$
+!!$!II.  DO CYCLIC REDUCTION
+!!$!     IMPORTANT: THE BLOCKS AND DATA ARE ASSUMED TO BE DISTRIBUTED CONSECUTIVELY
+!!$!                ON NODES AS DESCRIBED IN THE PAPER ....
+!!$
+!!$!*****************************************
+!!$      nsn = ns
+!!$      ns0 = 1
+!!$!DEC$ IF DEFINED (MPI_OPT)
+!!$      nblk_rows = ns
+!!$      ns0 = GetFirstBlockRow(rank, ns, 1)
+!!$      nsn = GetLastBlockRow(rank, ns, 1)
+!!$      print *,"Proc ",rank," handles block rows ",ns0," through ",nsn
+!!$      IF (rank .eq. 0) THEN
+!!$         WRITE (6, 100) mblock, ns
+!!$ 100     FORMAT (2x,'BLOCK SIZE: ',i5,' BLOCK ROWS: ',i5)
+!!$      END IF
+!!$!DEC$ ENDIF
+!!$
+!!$!     NOTE: IN PRODUCTION RUN, SKIP THIS SINCE ipivot, lblk, dblk, ublk, brhs ARE
+!!$!           KNOWN INPUTS
+!!$	  ALLOCATE (lblk(mblock,mblock,ns0:nsn), dblk(mblock,mblock,ns0:nsn),   &
+!!$                ublk(mblock,mblock,ns0:nsn), brhs(mblock,ns0:nsn),          &
+!!$				ipivot(mblock, ns0:nsn), stat=istat)
+!!$	  IF (istat .ne. 0) STOP 'Allocation error!'
+!!$      CALL INITIALIZE_BLOCKS (lblk, dblk, ublk, brhs, mblock)
+!!$
+!!$!     STORE lblk1, ETC ONLY FOR BACK-SOLVER CHECK
+!!$      ALLOCATE (lblk1(mblock,mblock,ns0:nsn), dblk1(mblock,mblock,ns0:nsn),   &
+!!$                ublk1(mblock,mblock,ns0:nsn), gc(mblock,ns0:nsn),             &
+!!$                stat=istat)
+!!$      IF (istat .ne. 0) STOP 'Allocation error!'
+!!$
+!!$      lblk1 = lblk; dblk1 = dblk; ublk1 = ublk
+!!$      gc = brhs
+!!$!*****************************************
+!!$
+!!$!     SIMULATE MULTIPLE RHS
+!!$      MULTIPLE_RHS: DO irhs = 1, 2
+!!$
+!!$!     SOLVE USING CYCLIC REDUCTION
+!!$!     SOLUTION OVERWRITE brhs ON EACH PROCESSOR
+!!$!DEC$ IF DEFINED (MPI_OPT)
+!!$      IF (rank .eq. 0) PRINT '(/,a,i1,/)',' SOLUTION RHS #',irhs
+!!$!DEC$ ELSE
+!!$      PRINT '(/,a,i1,/)',' SOLUTION RHS #',irhs
+!!$!DEC$ ENDIF
+!!$      CALL BCYCLIC_SOLVER (lblk, dblk, ublk, ipivot, brhs, mblock, ns)
+!!$
+!!$!     CHECK SOLUTION
+!!$      CALL CHECK_SOLVER (lblk1, dblk1, ublk1, brhs, gc, mblock, ns, irhs)
+!!$
+!!$!     IMPORTANT: DO NOT RESET FACTORED BLOCKS
+!!$!     RESET brhs (SOLUTION) TO INITIAL VALUE
+!!$      brhs(:,ns0:nsn)=gc(:,ns0:nsn)
+!!$
+!!$      END DO MULTIPLE_RHS
+!!$
+!!$!     CLEAN UP ALLOCATED ARRAYS
+!!$      CALL ClearStorage
+!!$      DEALLOCATE (ipivot, lblk, dblk, ublk, brhs, stat=istat)
+!!$      DEALLOCATE (lblk1, ublk1, dblk1, gc, stat=istat)
+!!$
+!!$!     SHUT DOWN MPI 
+!!$!DEC$ IF DEFINED (MPI_OPT)
+!!$      CALL MPI_BARRIER(MPI_COMM_WORLD, ierr)
+!!$      PRINT 200,'PID: ',rank,' INIT MEMORY (Mb): ', init_memory/1E6,  &
+!!$                             ' ADDED MEMORY (Mb): ', added_memory/1E6
+!!$ 200  FORMAT(a,i5,2(a,f10.3))
+!!$      CALL MPI_FINALIZE(ierr)
+!!$!DEC$ ENDIF
+!!$
+!!$      END PROGRAM CYCLICR
+!!$
+!!$      
+!!$	  SUBROUTINE SERIAL_THOMAS_TEST (mblock, ns)
+!!$      USE stel_kinds
+!!$      USE CYCLIC_RED
+!!$      IMPLICIT NONE
+!!$      INTEGER, INTENT(in)            :: ns, mblock
+!!$      INTEGER                        :: istat, k, nmin, irhs
+!!$      INTEGER, TARGET, ALLOCATABLE   :: ipivot(:,:)
+!!$      REAL(rprec), ALLOCATABLE, TARGET, DIMENSION(:,:,:) ::                     &
+!!$                   lblk, dblk, ublk, lblk1, dblk1, ublk1
+!!$      REAL(rprec), ALLOCATABLE, TARGET   :: brhs(:,:), gc(:,:)
+!!$	  INTEGER, ALLOCATABLE           :: seed(:)
+!!$	  REAL(rprec)                    :: rms_error, t1
+!!$!******************************************
+!!$!DEC$ IF DEFINED (MPI_OPT)
+!!$      IF (rank .ne. 0) RETURN
+!!$!DEC$ ENDIF      
+!!$
+!!$      CALL SYSTEM_CLOCK(timeon, countRate)
+!!$
+!!$!******************************************
+!!$!      OPEN(UNIT=33, FILE='TEST_CYCLICR2.bin', FORM='UNFORMATTED',         &
+!!$!     &     STATUS='OLD', IOSTAT=istat)
+!!$
+!!$!      IF (istat .ne. 0) STOP 'FILE NOT READ'
+!!$!      READ (33, iostat=istat) ns, mblock
+!!$!      IF (istat .ne. 0) STOP 'Read error!'
+!!$!      IF (ns .ne. nblocks .or. mblock .ne. mblock_size) STOP 'Wrong dimensions!'
+!!$!      nmin = MIN(ns, 101)
+!!$
+!!$	  ns0 = 1
+!!$	  nsn = ns
+!!$
+!!$      ALLOCATE (ipivot(mblock, ns), stat=istat)
+!!$      ALLOCATE (lblk(mblock,mblock,ns), dblk(mblock,mblock,ns),   &
+!!$                ublk(mblock,mblock,ns), lblk1(mblock,mblock,ns),  &
+!!$                ublk1(mblock,mblock,ns), dblk1(mblock,mblock,ns), &
+!!$                brhs(mblock,ns), gc(mblock,ns), stat = istat)
+!!$
+!!$!     RANDOM ELEMENTS
+!!$
+!!$      CALL RANDOM_SEED(size=k)
+!!$      ALLOCATE(SEED(k), stat=istat)
+!!$      IF (istat .ne. 0) STOP 'Allocation error for SEED!'
+!!$
+!!$      SEED = 12345
+!!$      CALL RANDOM_SEED(PUT=SEED)
+!!$
+!!$      CALL RANDOM_NUMBER(lblk)
+!!$      lblk(:,:,ns0:nsn)=-1 + 0.25*lblk(:,:,ns0:nsn)
+!!$
+!!$      CALL RANDOM_NUMBER(dblk)
+!!$      dblk(:,:,ns0:nsn)=2 + .5*dblk(:,:,ns0:nsn)
+!!$
+!!$      CALL RANDOM_NUMBER(ublk)
+!!$      ublk(:,:,ns0:nsn)=-1 + 0.25*ublk(:,:,ns0:nsn)
+!!$
+!!$      CALL RANDOM_NUMBER(brhs)
+!!$
+!!$      DEALLOCATE (seed)
+!!$
+!!$      CALL SYSTEM_CLOCK(timeoff, countRate)
+!!$      PRINT *,' TIME TO CREATE RANDOM DATA: ', REAL(timeoff-timeon)/countRate,' s'
+!!$
+!!$!I.   WITHOUT CYCLIC REDUCTION
+!!$      gc = brhs
+!!$      lblk1 = lblk; dblk1 = dblk; ublk1 = ublk
+!!$
+!!$      CALL SYSTEM_CLOCK(timeon)
+!!$      CALL THOMAS_FACTOR(lblk, dblk, ublk, ipivot)
+!!$      CALL THOMAS_SOLVE(lblk, dblk, ublk, brhs, ipivot)
+!!$      CALL SYSTEM_CLOCK(timeoff)
+!!$      DO istat = 1,ns
+!!$      DO k = 1,mblock
+!!$      WRITE (33, 100) istat, k, brhs(k,istat)
+!!$      END DO
+!!$      END DO
+!!$
+!!$ 100  FORMAT(2i5,1pe12.4)
+!!$
+!!$!Ia.  BACKSOLVE: CHECK SOLUTION
+!!$      rms_error = 0
+!!$      DO istat = 1,ns
+!!$         DO k = 1,mblock
+!!$            IF (istat .eq. 1) THEN
+!!$               t1 = SUM(dblk1(k,:,istat)*brhs(:,istat) + ublk1(k,:,istat)*brhs(:,istat+1))
+!!$            ELSE IF (istat .eq. ns) THEN
+!!$               t1 = SUM(lblk1(k,:,istat)*brhs(:,istat-1) + dblk1(k,:,istat)*brhs(:,istat))
+!!$            ELSE
+!!$               t1 = SUM(lblk1(k,:,istat)*brhs(:,istat-1) + dblk1(k,:,istat)*brhs(:,istat)  &
+!!$     &         + ublk1(k,:,istat)*brhs(:,istat+1))
+!!$            END IF
+!!$            rms_error = rms_error + (gc(k,istat)-t1)**2
+!!$         END DO
+!!$      END DO
+!!$
+!!$      PRINT *,' rms_error: ', SQRT(rms_error/(ns*mblock)),    &
+!!$     &    ' THOMAS SOLVE(s): ',REAL(timeoff-timeon)/countRate
+!!$
+!!$      DEALLOCATE (ipivot, lblk, dblk, ublk, lblk1, dblk1, ublk1, brhs, stat=istat)
+!!$	  DEALLOCATE (gc)
+!!$
+!!$	  END SUBROUTINE SERIAL_THOMAS_TEST
+!!$
+!!$      SUBROUTINE INITIALIZE_BLOCKS(lblk, dblk, ublk, brhs, mblock)
+!!$      USE stel_kinds
+!!$!DEC$ IF DEFINED (MPI_OPT)
+!!$      USE CYCLIC_RED, ONLY: rank, ns0, nsn
+!!$!DEC$ ELSE
+!!$      USE CYCLIC_RED, ONLY: ns0, nsn
+!!$!DEC$ ENDIF
+!!$      IMPLICIT NONE
+!!$      INTEGER, INTENT(in)      :: mblock
+!!$      REAL(rprec), DIMENSION(mblock,mblock,ns0:nsn), INTENT(out) :: lblk, dblk, ublk
+!!$      REAL(rprec), INTENT(out) :: brhs(mblock,ns0:nsn)
+!!$      INTEGER                  :: istat, k
+!!$	  INTEGER, ALLOCATABLE   :: seed(:)
+!!$      
+!!$      CALL RANDOM_SEED(size=k)
+!!$      ALLOCATE(SEED(k), stat=istat)
+!!$      IF (istat .ne. 0) STOP 'Allocation error for SEED!'
+!!$
+!!$      SEED = 12345
+!!$!DEC$ IF DEFINED (MPI_OPT)
+!!$      SEED = SEED + 10*rank
+!!$!DEC$ ENDIF
+!!$      CALL RANDOM_SEED(PUT=SEED)
+!!$
+!!$      CALL RANDOM_NUMBER(lblk)
+!!$      lblk=-1 + 0.5*(.5-lblk)
+!!$
+!!$      CALL RANDOM_NUMBER(dblk)
+!!$      dblk= 2 + (.5-dblk)
+!!$
+!!$      CALL RANDOM_NUMBER(ublk)
+!!$      ublk=-1 + 0.5*(.5-ublk)
+!!$
+!!$      CALL RANDOM_NUMBER(brhs)
+!!$	  brhs = 2*(.5-brhs)
+!!$
+!!$      DEALLOCATE (seed)
+!!$
+!!$	  END SUBROUTINE INITIALIZE_BLOCKS
+!!$

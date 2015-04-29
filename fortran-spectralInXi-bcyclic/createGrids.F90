@@ -5,13 +5,13 @@ subroutine createGrids()
   !use petscsys
   use stel_kinds
   use cyclic_red
-
   use variables, only: Nperiods, pi, matrixSize, &
        B, dBdtheta, dBdzeta, &
        Ntheta, Nzeta, Nxi, theta, zeta, &
        thetaWeights, zetaWeights, &
        ddtheta, ddzeta, &
-       thetaGridScheme, zetaGridScheme
+       thetaGridScheme, zetaGridScheme, &
+       mblock
 
   implicit none
 
@@ -22,7 +22,6 @@ subroutine createGrids()
   matrixSize = Ntheta*Nzeta*Nxi
 
   ! BCYCLIC stuff:
-  ns = Nxi
   mblock = Ntheta*Nzeta  ! Block size
 
   ! *****************************************************

@@ -1,17 +1,18 @@
 !#include <finclude/petsckspdef.h>
 
-subroutine diagnostics(solution)
+subroutine diagnostics()
 
   !use petscksp
+  use indices
   use stel_kinds
   use variables
-  use indices
 
   implicit none
 
+  INCLUDE 'mpif.h' 
   integer :: itheta, izeta, L, index
   real(rprec) :: flux, flow, VPrime, spatialPart
-  double precision :: sendBuffer, recvBuffer
+  double precision :: sendBuffer(1), recvBuffer(1)
   integer :: ierr
 
   if (masterProc) then

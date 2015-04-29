@@ -5,12 +5,13 @@
 program mmc
 
 !  use petscksp
+  use cyclic_red, only: rank, numtasks, bcyclic_solver, clearStorage
   use stel_kinds
-  use cyclic_red, only: rank, numtasks
   use variables
  
   implicit none
 
+  INCLUDE 'mpif.h' 
   integer :: ierr, istat
   INTEGER, POINTER :: ipivot(:,:)
 
@@ -62,7 +63,7 @@ program mmc
 
   call populateMatrix()
 
-  CALL BCYCLIC_SOLVER (lblk, dblk, ublk, ipivot, brhs, mblock, ns)
+  CALL BCYCLIC_SOLVER (lblk, dblk, ublk, ipivot, brhs, mblock, Nxi)
  
   call diagnostics()
 

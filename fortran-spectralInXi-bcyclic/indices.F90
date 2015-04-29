@@ -38,14 +38,14 @@ contains
        stop
     end if
 
-    getIndex = (i_theta-1)*Nzeta + i_zeta
+    getBlockIndex = (i_theta-1)*Nzeta + i_zeta
 
-    if (getIndex < 0) then
+    if (getBlockIndex < 0) then
        print *,"Error! Something went wrong, and the index came out less than 0."
        stop
     end if
 
-    if (getIndex >= mblock) then
+    if (getBlockIndex >= mblock) then
        print *,"Error! Something went wrong, and the index came out larger than the matrix size."
        stop
     end if

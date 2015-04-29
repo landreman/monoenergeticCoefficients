@@ -3,8 +3,8 @@
 subroutine populateRHS()
 
   !use petscvec
-  use stel_kinds
   use indices
+  use stel_kinds
   use variables, only: G, I, masterProc, B, dBdtheta, dBdzeta, Ntheta, Nzeta, Nxi, brhs, ns0, nsn
 
   implicit none
@@ -15,6 +15,8 @@ subroutine populateRHS()
   if (masterProc) then
      print *,"Entering populateRHS"
   end if
+
+  brhs = 0.0d+0
 
   do itheta = 1,Ntheta
      do izeta = 1,Nzeta

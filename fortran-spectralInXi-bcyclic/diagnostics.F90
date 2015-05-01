@@ -3,6 +3,7 @@
 subroutine diagnostics()
 
   !use petscksp
+  use cyclic_red, only: nsn, ns0
   use indices
   use stel_kinds
   use variables
@@ -19,27 +20,55 @@ subroutine diagnostics()
      print *,"Entering diagnostics"
   end if
 
+!!$  print *,"Here comes solution."
+!!$  do L=0,(Nxi-1)
+!!$     print *,"L=",L
+!!$     do itheta = 1,Ntheta
+!!$        print *,"  itheta=",itheta
+!!$        do izeta = 1,Nzeta
+!!$           index = getBlockIndex(itheta,izeta)
+!!$           print *,brhs(index,L+1)
+!!$        end do
+!!$     end do
+!!$  end do
+
+
   flux = 0
   flow = 0
 
-  do itheta = 1,Ntheta
-     do izeta = 1,Nzeta
-        index = getBlockIndex(itheta,izeta)
-        if ((index >= ns0) .and. (index <= nsn)) then
+  L = 0
+  if ((L+1 >= ns0) .and. (L+1 <= nsn)) then
+     do itheta = 1,Ntheta
+        do izeta = 1,Nzeta
+           index = getBlockIndex(itheta,izeta)
            spatialPart = (G * dBdtheta(itheta,izeta) - I * dBdzeta(itheta,izeta))/(B(itheta,izeta) ** 3) &
                 * thetaWeights(itheta)*zetaWeights(izeta)
-
-           L = 0
            flux = flux + brhs(index,L+1) * spatialPart * 8/3
-
-           L = 2
-           flux = flux + brhs(index,L+1) * spatialPart * 4/15
-
-           L = 1
-           flow = flow + brhs(index,L+1) / B(itheta,izeta) * thetaWeights(itheta)*zetaWeights(izeta)
-        end if
+        end do
      end do
-  end do
+  end if
+
+  L = 2
+  if ((L+1 >= ns0) .and. (L+1 <= nsn)) then
+     do itheta = 1,Ntheta
+        do izeta = 1,Nzeta
+           index = getBlockIndex(itheta,izeta)
+           spatialPart = (G * dBdtheta(itheta,izeta) - I * dBdzeta(itheta,izeta))/(B(itheta,izeta) ** 3) &
+                * thetaWeights(itheta)*zetaWeights(izeta)
+           flux = flux + brhs(index,L+1) * spatialPart * 4/15
+        end do
+     end do
+  end if
+
+  L = 1
+  if ((L+1 >= ns0) .and. (L+1 <= nsn)) then
+     do itheta = 1,Ntheta
+        do izeta = 1,Nzeta
+           index = getBlockIndex(itheta,izeta)
+           flow = flow + brhs(index,L+1) / B(itheta,izeta) * thetaWeights(itheta)*zetaWeights(izeta)
+        end do
+     end do
+  end if
           
   VPrime = 0
   do itheta = 1,Ntheta

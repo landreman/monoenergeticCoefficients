@@ -5,7 +5,7 @@
 program mmc
 
 !  use petscksp
-  use cyclic_red, only: rank, numtasks, bcyclic_solver, clearStorage
+  use cyclic_red, only: rank, numtasks, bcyclic_solver, clearStorage, ns0, nsn
   use stel_kinds
   use variables
  
@@ -26,7 +26,7 @@ program mmc
   masterProc = (myRank==0)
 
   ! Set defaults:
-  nu = 0.1d+0
+  nu = 0.01d+0
   diagonalShift = nu * 1.0d-5
   epsilon_t = -0.07053d+0
   epsilon_h = 0.05067d+0
@@ -35,9 +35,9 @@ program mmc
   I = 0d+0
   Nperiods = 10
   helicity_l = 2
-  Ntheta = 13
-  Nzeta = 15
-  Nxi = 16
+  Ntheta = 23
+  Nzeta = 17
+  Nxi = 33
   thetaGridScheme = 10
   zetaGridScheme = 10
 

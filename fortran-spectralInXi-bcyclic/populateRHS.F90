@@ -5,7 +5,8 @@ subroutine populateRHS()
   !use petscvec
   use indices
   use stel_kinds
-  use variables, only: G, I, masterProc, B, dBdtheta, dBdzeta, Ntheta, Nzeta, Nxi, brhs, ns0, nsn
+  use variables, only: G, I, masterProc, B, dBdtheta, dBdzeta, Ntheta, Nzeta, Nxi, brhs
+  use cyclic_red, only: ns0, nsn
 
   implicit none
 
@@ -18,19 +19,26 @@ subroutine populateRHS()
 
   brhs = 0.0d+0
 
-  do itheta = 1,Ntheta
-     do izeta = 1,Nzeta
-        index = getBlockIndex(itheta,izeta)
-        if ((index >= ns0) .and. (index <= nsn)) then
+  L = 0
+  if ((L+1 >= ns0) .and. (L+1 <= nsn)) then
+     do itheta = 1,Ntheta
+        do izeta = 1,Nzeta
+           index = getBlockIndex(itheta,izeta)
            valueToInsert = (1.0d+0)/B(itheta,izeta)*(G*dBdtheta(itheta,izeta)-I*dBdzeta(itheta,izeta))
-
-           L = 0
            brhs(index,L+1) = valueToInsert*4/(3.0d+0)
-
-           L = 2
-           brhs(index,L+1) = valueToInsert*2/(3.0d+0)
-        end if
+        end do
      end do
-  end do
+  end if
+
+  L = 2
+  if ((L+1 >= ns0) .and. (L+1 <= nsn)) then
+     do itheta = 1,Ntheta
+        do izeta = 1,Nzeta
+           index = getBlockIndex(itheta,izeta)
+           valueToInsert = (1.0d+0)/B(itheta,izeta)*(G*dBdtheta(itheta,izeta)-I*dBdzeta(itheta,izeta))
+           brhs(index,L+1) = valueToInsert*2/(3.0d+0)
+        end do
+     end do
+  end if
 
 end subroutine populateRHS

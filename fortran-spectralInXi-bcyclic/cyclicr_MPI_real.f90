@@ -1156,6 +1156,13 @@ END FUNCTION GetLastBlockRow
      &                        , ns
       IF (ierr < 0)WRITE (6,'(i4, a)') ierr, 'th argument has illegal value'
       IF (ierr > 0)WRITE (6,'(i4, a)') ierr, 'th diagonal factor exactly zero'
+
+      print *,"This is proc ",rank
+      print *,"Here comes dmat:"
+      do ierr = 1,size(dmat,2)
+         print *,dmat(ierr,:)
+      end do
+
       STOP
   301 CONTINUE
 !      WRITE (6, '(a,i8)') ' BLK3D:   error in opening file:  ',

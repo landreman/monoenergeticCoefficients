@@ -23,6 +23,9 @@ subroutine createGrids()
 
   ! BCYCLIC stuff:
   mblock = Ntheta*Nzeta  ! Block size
+  nblk_rows = Nxi
+  ns0 = GetFirstBlockRow(rank, Nxi, 1)
+  nsn = GetLastBlockRow(rank, Nxi, 1)
 
   ! *****************************************************
   ! Set up theta grid

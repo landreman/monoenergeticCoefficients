@@ -27,6 +27,6 @@ module variables
   REAL(rprec), ALLOCATABLE, TARGET, DIMENSION(:,:,:) :: lblk, dblk, ublk
   REAL(rprec), ALLOCATABLE, TARGET  :: brhs(:,:)
 
-  integer :: mblock, ns0, nsn
+  integer :: mblock
 
 end module variables

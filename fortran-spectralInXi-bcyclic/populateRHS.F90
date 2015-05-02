@@ -14,7 +14,7 @@ subroutine populateRHS()
   real(rprec) :: valueToInsert
 
   if (masterProc) then
-     print *,"Entering populateRHS"
+     print *,"Entering populateRHS."
   end if
 
   brhs = 0.0d+0

@@ -16,8 +16,14 @@ subroutine diagnostics()
   double precision :: sendBuffer(1), recvBuffer(1)
   integer :: ierr
 
+  integer :: clockStop
+  real :: elapsedTime
+
+  character(len=6) :: filename="output"
+  integer :: fileUnit=11, didFileAccessWork
+
   if (masterProc) then
-     print *,"Entering diagnostics"
+     print *,"Entering diagnostics."
   end if
 
 !!$  print *,"Here comes solution."
@@ -89,8 +95,26 @@ subroutine diagnostics()
   call MPI_Reduce(sendBuffer, recvBuffer, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   flow = recvBuffer(1)
 
+  call system_clock(clockStop)
+  elapsedTime = real(clockStop-clockStart)/clockRate
+
   if (masterProc) then   
-     print *,"Results: VPrime = ",VPrime,", flux = ",flux,", flow = ",flow
+     print *,"Results:"
+     print *,"  Flux = ",flux
+     print *,"  Flow = ",flow
+     print *,"  Time for solve (seconds) = ",elapsedTime
+
+
+     open(unit=fileUnit, file=filename, action="write", iostat = didFileAccessWork)
+     if (didFileAccessWork /= 0) then
+        print *,"Error opening ", trim(filename)
+        stop
+     else
+        write (unit=fileUnit,fmt="(a,es22.15)") "Flux = ", flux
+        write (unit=fileUnit,fmt="(a,es22.15)") "Flow = ", flow
+        write (unit=fileUnit,fmt="(a,es22.15)") "Time = ", elapsedTime
+        close(unit=fileUnit)
+     end if
   end if
 
 end subroutine diagnostics

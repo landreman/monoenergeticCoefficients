@@ -41,6 +41,8 @@ program mmc
   thetaGridScheme = 10
   zetaGridScheme = 10
 
+  call readInput()
+
   if (masterProc) then
      print *,"Ntheta = ",Ntheta
      print *,"Nzeta = ",Nzeta
@@ -62,6 +64,8 @@ program mmc
   call populateRHS()
 
   call populateMatrix()
+
+  call system_clock(clockStart, clockRate)
 
   CALL BCYCLIC_SOLVER (lblk, dblk, ublk, ipivot, brhs, mblock, Nxi)
  

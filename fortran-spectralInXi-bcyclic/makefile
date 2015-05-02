@@ -10,8 +10,7 @@ FLINKER = ftn
 
 TARGET = mmc
 
-OBJ_FILES = computeB.o createGrids.o diagnostics.o indices.o mmc.o populateMatrix.o populateRHS.o stel_constants.o stel_kinds.o uniformDiffMatrices.o variables.o cyclicr_MPI_real.o
-#OBJ_FILES = computeB.o createGrids.o diagnostics.o indices.o mmc.o populateMatrix.o populateRHS.o stel_constants.o stel_kinds.o uniformDiffMatrices.o variables.o
+OBJ_FILES = computeB.o createGrids.o diagnostics.o indices.o mmc.o populateMatrix.o populateRHS.o readInput.o stel_constants.o stel_kinds.o uniformDiffMatrices.o variables.o cyclicr_MPI_real.o
 
 .PHONY: all clean
 
@@ -44,6 +43,7 @@ indices.o: variables.o
 mmc.o: cyclicr_MPI_real.o stel_kinds.o variables.o
 populateMatrix.o: cyclicr_MPI_real.o indices.o stel_kinds.o variables.o
 populateRHS.o: cyclicr_MPI_real.o indices.o stel_kinds.o variables.o
+readInput.o: variables.o
 stel_constants.o: stel_kinds.o
 stel_kinds.o: 
 uniformDiffMatrices.o: stel_kinds.o

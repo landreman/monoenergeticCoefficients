@@ -1,0 +1,8 @@
+! Input file for fortran-spectralInXi-bcyclic monoenergetic code
+
+&inputs
+  Ntheta = 23
+  Nzeta = 17
+  Nxi = 33
+  nu = 0.01d+0
+/

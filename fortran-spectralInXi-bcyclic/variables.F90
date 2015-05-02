@@ -28,5 +28,6 @@ module variables
   REAL(rprec), ALLOCATABLE, TARGET  :: brhs(:,:)
 
   integer :: mblock
+  integer :: clockStart, clockRate
 
 end module variables

@@ -24,4 +24,6 @@ module variables
 
   PetscInt :: thetaGridScheme, zetaGridScheme
 
+  integer :: clockStart, clockRate
+
 end module variables

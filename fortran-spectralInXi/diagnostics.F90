@@ -20,6 +20,13 @@ subroutine diagnostics(solution)
   PetscReal :: flux, flow, VPrime, spatialPart
   PetscScalar, pointer :: solnArray(:)
 
+  integer :: clockStop
+  real :: elapsedTime
+
+  character(len=6) :: filename="output"
+  integer :: fileUnit=11, didFileAccessWork
+
+
   if (masterProc) then
      print *,"Entering diagnostics"
   end if
@@ -70,7 +77,30 @@ subroutine diagnostics(solution)
      flow = flow * 4 / (3*sqrtpi*G*VPrime)
      flux = -2 / (sqrtpi*G*G*VPrime)*flux
      
-     print *,"Results: VPrime = ",VPrime,", flux = ",flux,", flow = ",flow
+     call system_clock(clockStop)
+     elapsedTime = real(clockStop-clockStart)/clockRate
+
+     print *,"Results:"
+     print *,"  Flux = ",flux
+     print *,"  Flow = ",flow
+     print *,"  Time for solve (seconds) = ",elapsedTime
+
+     open(unit=fileUnit, file=filename, action="write", iostat = didFileAccessWork)
+     if (didFileAccessWork /= 0) then
+        print *,"Error opening ", trim(filename)
+        stop
+     else
+        write (unit=fileUnit,fmt="(a,i5)") "Ntheta = ", Ntheta
+        write (unit=fileUnit,fmt="(a,i5)") "Nzeta  = ", Nzeta
+        write (unit=fileUnit,fmt="(a,i5)") "Nxi    = ", Nxi
+        write (unit=fileUnit,fmt="(a,es22.15)") "nu = ", nu
+        write (unit=fileUnit,fmt="(a,i5)") "numProcs = ", numProcs
+        write (unit=fileUnit,fmt="(a,es22.15)") "Flux = ", flux
+        write (unit=fileUnit,fmt="(a,es22.15)") "Flow = ", flow
+        write (unit=fileUnit,fmt="(a,es22.15)") "Time = ", elapsedTime
+        close(unit=fileUnit)
+     end if
+
   end if
 
 

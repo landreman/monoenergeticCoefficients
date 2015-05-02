@@ -5,7 +5,7 @@ EXTRA_LINK_FLAGS =
 
 TARGET = mmc
 
-OBJ_FILES = computeB.o createGrids.o diagnostics.o indices.o mmc.o populateMatrix.o populateRHS.o preallocateMatrix.o sparsify.o uniformDiffMatrices.o variables.o
+OBJ_FILES = computeB.o createGrids.o diagnostics.o indices.o mmc.o populateMatrix.o populateRHS.o preallocateMatrix.o readInput.o sparsify.o uniformDiffMatrices.o variables.o
 
 .PHONY: all clean
 
@@ -32,6 +32,7 @@ mmc.o: variables.o
 populateMatrix.o: indices.o sparsify.o variables.o
 populateRHS.o: indices.o variables.o
 preallocateMatrix.o: variables.o
+readInput.o: variables.o
 sparsify.o:
 uniformDiffMatrices.o:	
 variables.o:

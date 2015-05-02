@@ -110,6 +110,11 @@ subroutine diagnostics()
         print *,"Error opening ", trim(filename)
         stop
      else
+        write (unit=fileUnit,fmt="(a,i5)") "Ntheta = ", Ntheta
+        write (unit=fileUnit,fmt="(a,i5)") "Nzeta  = ", Nzeta
+        write (unit=fileUnit,fmt="(a,i5)") "Nxi    = ", Nxi
+        write (unit=fileUnit,fmt="(a,es22.15)") "nu = ", nu
+        write (unit=fileUnit,fmt="(a,i5)") "numProcs = ", numProcs
         write (unit=fileUnit,fmt="(a,es22.15)") "Flux = ", flux
         write (unit=fileUnit,fmt="(a,es22.15)") "Flow = ", flow
         write (unit=fileUnit,fmt="(a,es22.15)") "Time = ", elapsedTime

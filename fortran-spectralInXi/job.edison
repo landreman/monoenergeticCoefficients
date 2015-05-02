@@ -1,0 +1,19 @@
+#!/bin/bash
+
+### Set the job name
+#PBS -N mmc
+
+### Set the number of nodes that will be used.
+#PBS -l mppwidth=24
+#PBS -l walltime=00:10:00
+
+### Set the queue to submit this job.
+#PBS -q debug
+
+#PBS -V
+#PBS -j oe
+
+cd $PBS_O_WORKDIR
+aprun -n 24 ./mmc -options_left -ksp_view -pc_factor_mat_solver_package mumps -ksp_type preonly -mat_mumps_icntl_4 3
+
+#aprun -n 3 -N 3 ./mmc -options_left -ksp_view -pc_factor_mat_solver_package superlu_dist -ksp_type preonly

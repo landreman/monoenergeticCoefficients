@@ -47,6 +47,11 @@ program mmc
   Nxi = 16
   thetaGridScheme = 10
   zetaGridScheme = 10
+
+  call readInput()
+
+  ! Command-line arguments will override input.namelist:
+
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
@@ -89,6 +94,7 @@ program mmc
   if (masterProc) then
      print *,"Beginning solve..."
   end if
+  call system_clock(clockStart, clockRate)
   call KSPSolve(ksp, rhs, solution, ierr)
   if (masterProc) then
      print *,"Done!"

@@ -4,7 +4,10 @@ Ntheta = resolutionParameters.Ntheta;
 Nzeta = resolutionParameters.Nzeta;
 Nxi = resolutionParameters.Nxi;
 
-matrixSize = Ntheta*Nzeta*Nxi + 1;
+matrixSize = Ntheta*Nzeta*Nxi;
+if resolutionParameters.includeConstraint
+    matrixSize = matrixSize + 1;
+end
 
 % Build theta grid:
 [theta, ddtheta, thetaWeights] = setupGrid(Ntheta,0,2*pi);
@@ -137,26 +140,31 @@ for itheta=1:Ntheta
     end
 end
 
+
 % -----------------------------------------
 % Add the extra constraint:
 % -----------------------------------------
 
-rowIndex = matrixSize;
-L = 0;
-for itheta=1:Ntheta
-    colIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-    addSparseBlock(rowIndex, colIndices, thetaWeights(itheta) * (zetaWeights') ./ (B(itheta,:) .^ 2))
+if resolutionParameters.includeConstraint
+    rowIndex = matrixSize;
+    L = 0;
+    for itheta=1:Ntheta
+        colIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
+        addSparseBlock(rowIndex, colIndices, thetaWeights(itheta) * (zetaWeights') ./ (B(itheta,:) .^ 2))
+    end
 end
 
 % -----------------------------------------
 % Add the "source" lambda:
 % -----------------------------------------
 
-colIndex = matrixSize;
-L = 0;
-for itheta=1:Ntheta
-    rowIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-    addSparseBlock(rowIndices, colIndex, ones(Nzeta,1))
+if resolutionParameters.includeConstraint
+    colIndex = matrixSize;
+    L = 0;
+    for itheta=1:Ntheta
+        rowIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
+        addSparseBlock(rowIndices, colIndex, ones(Nzeta,1))
+    end
 end
 
 % -----------------------------------------

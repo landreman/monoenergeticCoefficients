@@ -1,17 +1,27 @@
-function solution = solver(matrix, rhs, solutionMethod)
+function [solution, totalNNZ] = solver(matrix, rhs, solutionMethod)
 
 % Options for solutionMethod:
-% 1 = direct solver
-% 2 = GMRES with no preconditioner
+% 1 = direct solver (backslash)
+% 2 = direct solver (explicit LU)
+% 3 = GMRES with no preconditioner
 
 switch solutionMethod
     case 1
         % Direct solver
         fprintf('Using direct solver.\n')
         solution = matrix \ rhs;
+        totalNNZ = -1; % Cannot be determined for this solutionMethod
         
     case 2
+        fprintf('LU-factorizing the matrix.\n')
+        [preconditioner_L, preconditioner_U, preconditioner_P, preconditioner_Q] = lu(matrix);
+        totalNNZ = nnz(preconditioner_L)+nnz(preconditioner_U);
+        fprintf('nnz(L): %d,  nnz(U): %d,  total: %d\n',nnz(preconditioner_L), nnz(preconditioner_U), totalNNZ)
+        solution = preconditioner_Q * (preconditioner_U \ (preconditioner_L \ (preconditioner_P * (rhs))));
+
+    case 3
         % GMRES with no preconditioner
+        totalNNZ = 0; % Memory required is negligible for this solutionMethod.
         restart = 100;
         tol = 1e-8;
         maxIterations = 200;

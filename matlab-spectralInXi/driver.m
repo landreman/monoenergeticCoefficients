@@ -12,15 +12,17 @@ geometryParameters = struct(...
 resolutionParameters = struct(...
     'Ntheta', 13,...
     'Nzeta', 15,...
-    'Nxi', 16);
+    'Nxi', 16,...
+    'includeConstraint', false);
 
 % Collisionality:
 % (Typically nu << 1, so advection dominates diffusion.)
 nu = 0.1;
 
-solutionMethod = 1;
+solutionMethod = 2;
 % 1 = sparse direct solver (backslash)
-% 2 = GMRES with no preconditioning
+% 2 = sparse direct solver (explicit LU decomposition, so memory can be monitored.)
+% 3 = GMRES with no preconditioning
 
 % **********************************************************
 % End of input parameters.
@@ -46,9 +48,11 @@ title('B')
 
 tic
 fprintf('Beginning solve.\n')
-solution = solver(problem.matrix, problem.rhs, solutionMethod);
+[solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
 fprintf('Done. Time for solve: %g sec\n',toc)
 
-fprintf('Source: %g  (Should be within machine precision of 0)\n',solution(end))
+if resolutionParameters.includeConstraint
+    fprintf('Source: %g  (Should be within machine precision of 0)\n',solution(end))
+end
 outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
 fprintf('Diagnostics: flux (L11) = %g, flow (L21) = %g.\n',outputs.flux,outputs.flow);

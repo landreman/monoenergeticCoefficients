@@ -27,9 +27,10 @@ Psi_Chandra = (erf(1) - 2/sqrt(pi)*exp(-1)) / 2;
 nuD = 3*sqrt(pi)/4*(erf(1) - Psi_Chandra);
 nu = nuPrime * nuD;
 
+includeConstraint = true;
+solutionMethod = 2;
 
-
-quantitiesToRecord = {'flux','flow'};
+quantitiesToRecord = {'flux','flow','time for LU','nnz(L)+nnz(U)'};
 
 linespecs = {'.-b','.-r','.-g','.-m','.:c','.-r','.:k','.:b','.-m'};
 
@@ -53,13 +54,17 @@ for iii = 1:numel(Nthetas)
     resolutionParameters = struct(...
         'Ntheta', Nthetas(iii),...
         'Nzeta', NzetaConverged,...
-        'Nxi', NxiConverged);
+        'Nxi', NxiConverged,...
+        'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
     problem = assembleMatrix(resolutionParameters, nu, geometryParameters);
-    solution = problem.matrix \ problem.rhs;
+    tic
+    [solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
     quantities{parameterScanNum}(iii,1)=outputs.flux;
     quantities{parameterScanNum}(iii,2)=outputs.flow;
+    quantities{parameterScanNum}(iii,3)=toc;
+    quantities{parameterScanNum}(iii,4)=totalNNZ;
 end
 parameterScanNum = parameterScanNum+1;
 
@@ -68,13 +73,17 @@ for iii = 1:numel(Nzetas)
     resolutionParameters = struct(...
         'Ntheta', NthetaConverged,...
         'Nzeta', Nzetas(iii),...
-        'Nxi', NxiConverged);
+        'Nxi', NxiConverged,...
+        'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
     problem = assembleMatrix(resolutionParameters, nu, geometryParameters);
-    solution = problem.matrix \ problem.rhs;
+    tic
+    [solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
     quantities{parameterScanNum}(iii,1)=outputs.flux;
     quantities{parameterScanNum}(iii,2)=outputs.flow;
+    quantities{parameterScanNum}(iii,3)=toc;
+    quantities{parameterScanNum}(iii,4)=totalNNZ;
 end
 parameterScanNum = parameterScanNum+1;
 
@@ -83,13 +92,17 @@ for iii = 1:numel(Nxis)
     resolutionParameters = struct(...
         'Ntheta', NthetaConverged,...
         'Nzeta', NzetaConverged,...
-        'Nxi', Nxis(iii));
+        'Nxi', Nxis(iii),...
+        'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
     problem = assembleMatrix(resolutionParameters, nu, geometryParameters);
-    solution = problem.matrix \ problem.rhs;
+    tic
+    [solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
     quantities{parameterScanNum}(iii,1)=outputs.flux;
     quantities{parameterScanNum}(iii,2)=outputs.flow;
+    quantities{parameterScanNum}(iii,3)=toc;
+    quantities{parameterScanNum}(iii,4)=totalNNZ;
 end
 parameterScanNum = parameterScanNum+1;
 

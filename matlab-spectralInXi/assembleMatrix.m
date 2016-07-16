@@ -13,7 +13,7 @@ end
 [theta, ddtheta, thetaWeights] = setupGrid(Ntheta,0,2*pi);
 
 % Build zeta grid:
-if Ntheta==1
+if Nzeta==1
     zeta=0;
     ddzeta=0;
     zetaWeights=2*pi;
@@ -50,6 +50,10 @@ resetSparseCreator()
 % ***************************************************************************
 % ***************************************************************************
 
+Ls = (1:Nxi)-1;
+%rowScaling = (2*Ls+1) .^ (1.5);
+rowScaling = ones(size(Ls));
+
 % -----------------------------------------
 % Add d/dtheta terms:
 % -----------------------------------------
@@ -63,14 +67,14 @@ for izeta=1:Nzeta
         if (L<Nxi-1)
             ell = L + 1;
             colIndices = getIndex(1:Ntheta,izeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*thetaPartOfTerm)
+            addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*thetaPartOfTerm*rowScaling(L+1))
         end
         
         % Sub-diagonal term
         if (L>0)
             ell = L - 1;
             colIndices = getIndex(1:Ntheta,izeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, L/(2*L-1)*thetaPartOfTerm)
+            addSparseBlock(rowIndices, colIndices, L/(2*L-1)*thetaPartOfTerm*rowScaling(L+1))
         end
         
     end
@@ -89,14 +93,14 @@ for itheta=1:Ntheta
         if (L<Nxi-1)
             ell = L + 1;
             colIndices = getIndex(itheta,1:Nzeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*zetaPartOfTerm)
+            addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*zetaPartOfTerm*rowScaling(L+1))
         end
         
         % Sub-diagonal term
         if (L>0)
             ell = L - 1;
             colIndices = getIndex(itheta,1:Nzeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, L/(2*L-1)*zetaPartOfTerm)
+            addSparseBlock(rowIndices, colIndices, L/(2*L-1)*zetaPartOfTerm*rowScaling(L+1))
         end
         
     end
@@ -115,14 +119,14 @@ for itheta=1:Ntheta
         if (L<Nxi-1)
             ell = L + 1;
             colIndices = getIndex(itheta,1:Nzeta,ell+1,resolutionParameters);
-            addToSparse(rowIndices, colIndices, (L+1)*(L+2)/(2*L+3)*spatialPartOfTerm)
+            addToSparse(rowIndices, colIndices, (L+1)*(L+2)/(2*L+3)*spatialPartOfTerm*rowScaling(L+1))
         end
         
         % Sub-diagonal term
         if (L>0)
             ell = L - 1;
             colIndices = getIndex(itheta,1:Nzeta,ell+1,resolutionParameters);
-            addToSparse(rowIndices, colIndices, (-L)*(L-1)/(2*L-1)*spatialPartOfTerm)
+            addToSparse(rowIndices, colIndices, (-L)*(L-1)/(2*L-1)*spatialPartOfTerm*rowScaling(L+1))
         end
         
     end
@@ -136,7 +140,7 @@ L = (1:Nxi)-1;
 for itheta=1:Ntheta
     for izeta=1:Nzeta
         indices = getIndex(itheta,izeta,L+1,resolutionParameters);
-        addToSparse(indices, indices, nu/2*L.*(L+1))
+        addToSparse(indices, indices, nu/2*L.*(L+1).*rowScaling)
     end
 end
 
@@ -150,7 +154,7 @@ if resolutionParameters.includeConstraint
     L = 0;
     for itheta=1:Ntheta
         colIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-        addSparseBlock(rowIndex, colIndices, thetaWeights(itheta) * (zetaWeights') ./ (B(itheta,:) .^ 2))
+        addSparseBlock(rowIndex, colIndices, (1e0)*thetaWeights(itheta) * (zetaWeights') ./ (B(itheta,:) .^ 2))
     end
 end
 
@@ -163,7 +167,7 @@ if resolutionParameters.includeConstraint
     L = 0;
     for itheta=1:Ntheta
         rowIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-        addSparseBlock(rowIndices, colIndex, ones(Nzeta,1))
+        addSparseBlock(rowIndices, colIndex, (1e0)*ones(Nzeta,1)*rowScaling(1))
     end
 end
 
@@ -190,11 +194,11 @@ spatialPart = (1./B) .* (geometryParameters.G * dBdtheta - geometryParameters.I 
 for itheta=1:Ntheta
     L=0;
     indices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-    rhs(indices) = spatialPart(itheta,:) * (4/3);
+    rhs(indices) = spatialPart(itheta,:) * (4/3) * rowScaling(L+1);
     
     L=2;
     indices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-    rhs(indices) = spatialPart(itheta,:) * (2/3);
+    rhs(indices) = spatialPart(itheta,:) * (2/3) * rowScaling(L+1);
 end
 
 

@@ -1,71 +1,49 @@
 function returnStruct = assembleMatrix(resolutionParameters, nu, geometryParameters)
 
-Ntheta = resolutionParameters.Ntheta;
-Nzeta = resolutionParameters.Nzeta;
+NFourier = resolutionParameters.NFourier;
 Nxi = resolutionParameters.Nxi;
+NFourier2 = resolutionParameters.NFourier2;
 
-matrixSize = Ntheta*Nzeta*Nxi;
-
-% Build theta grid:
-
-%scheme = 0; % Uniform periodic 2nd order FD                    
-scheme = 10; % Uniform periodic 4th order FD
-%[theta, ddtheta, thetaWeights] = setupGrid(Ntheta,0,2*pi);
-[theta, thetaWeights, ddtheta, ~] = m20121125_04_DifferentiationMatricesForUniformGrid(Ntheta, 0, 2*pi, scheme);
-
-% Build zeta grid:
-if Nzeta==1
-    zeta=0;
-    ddzeta=0;
-    zetaWeights=2*pi;
-else
-    zetaMax = 2*pi/geometryParameters.Nperiods;
-    %[zeta, ddzeta, zetaWeights] = setupGrid(Nzeta,0,zetaMax);
-    %zetaWeights = zetaWeights * geometryParameters.Nperiods;
-
-    %scheme = 0; % Uniform periodic 2nd order FD                    
-    scheme = 10; % Uniform periodic 4th order FD
-    [zeta, zetaWeights, ddzeta, ~] = m20121125_04_DifferentiationMatricesForUniformGrid(Nzeta, 0, zetaMax, scheme);
+matrixSize = NFourier2*Nxi;
+if resolutionParameters.includeConstraint
+    matrixSize = matrixSize + 1;
 end
 
-% Switch to cell-centered:
-theta = theta + (theta(2)-theta(1))/2;
-zeta = zeta + (zeta(2)-zeta(1))/2;
+% Choose (m,n) pairs to use:
+[ms,ns,Binv_vec] = chooseFourierModes(geometryParameters,resolutionParameters);
 
-[zeta2D, theta2D] = meshgrid(zeta,theta);
-
-% Build xi grid:
-xi = linspace(-1,1,Nxi+1);
-xi = xi(:);
-xi(end)=[];
-dxi = xi(2)-xi(1);
-xi = xi + dxi/2; % Make cell-centered
-
-scheme = 2; % First and last rows use one-sided 3-point stencil
-%scheme = 3; % First and last rows use one-sided 2-point stencil
-[~, ~, ddxi_mirror, ~] = m20121125_04_DifferentiationMatricesForUniformGrid(Nxi, min(xi), max(xi), scheme);
-
-xiWeights = zeros(size(xi))+2/Nxi;
-
-% collisionOperator = (d/dxi) (1-xi^2) (d/dxi)
-dxi2 = dxi*dxi;
-collisionOperator = ...
-    diag((1-(xi(1:end-1)+dxi/2).^2)/dxi2, 1) ...
-    - diag((1-(xi+dxi/2).^2)/dxi2 + (1-(xi-dxi/2).^2)/dxi2, 0) ...
-    + diag((1-(xi(2:end)-dxi/2).^2)/dxi2, -1);
+[ddtheta,ddzeta] = buildFourierDifferentiationMatrices(ms,ns);
 
 
-% Initialize the arrays for the magnetic field strength B:
+% Make a vector in mn-space that represents |B|:
+Bvec = zeros(NFourier2,1);
+% Constant term:
+Bvec(1) = 1;
+% Toroidal mode:
+mask = (ms==1 & ns==0);
+index = find(mask);
+if numel(index) ~= 1
+    error('Error! Did not find the toroidal mode!\n')
+end
+Bvec(index) = geometryParameters.epsilon_t;
+% Helical mode:
+mask = (ms==geometryParameters.helicity_l & ns==geometryParameters.Nperiods);
+index = find(mask);
+if numel(index) ~= 1
+    error('Error! Did not find the helical mode!\n')
+end
+Bvec(index) = geometryParameters.epsilon_h;
+
+BMatrix = buildFourierConvolutionMatrix(ms,ns,Bvec);
+BinvMatrix = buildFourierConvolutionMatrix(ms,ns,Binv_vec);
 iota = geometryParameters.iota;
-[B, dBdtheta, dBdzeta] = geometry(theta2D, zeta2D, geometryParameters);
 
 estimated_nnz = ...
-    Ntheta*Nzeta*Nxi*4*2 ... % ddtheta term (4 off-diagonals in theta, 2 off-diagonals in xi)
-    + Ntheta*Nzeta*Nxi*4*2 ...  % ddzeta term (4 off-diagonals in zeta, 2 off-diagonals in xi)
-    + Ntheta*Nzeta*Nxi*2 ... % ddxi term (2 off-diagonals in xi)
-    + Ntheta*Nzeta*(Nxi-1) ...   % collision term (diagonal, 0 when L=0)
-    + Ntheta*Nzeta ... % constraint term
-    + Ntheta*Nzeta; % source term
+    NFourier2*NFourier2*Nxi*2 ... % streaming term (dense in Fourier, 2 off-diagonals in xi)
+    + NFourier2*NFourier2*Nxi*2 ... % ddxi term (dense in Fourier, 2 off-diagonals in xi)
+    + NFourier2*(Nxi-1) ...   % collision term (diagonal, 0 when L=0)
+    + 1 ... % Source
+    + NFourier2;  % Constraint
 
 % Initialize some arrays that are used for building the sparse matrix:
 sparseCreatorIndex=1;
@@ -81,76 +59,92 @@ resetSparseCreator()
 % ***************************************************************************
 
 % -----------------------------------------
-% Add d/dtheta terms:
+% Add streaming terms:
 % -----------------------------------------
+iota_ddtheta_plus_ddzeta = iota*ddtheta+ddzeta;
 
-for izeta=1:Nzeta
-    thetaPartOfTerm = iota*diag(B(:,izeta))*ddtheta;
-    for ixi = 1:Nxi
-        indices = getIndex(1:Ntheta,izeta,ixi,resolutionParameters);
-        addSparseBlock(indices, indices, xi(ixi)*thetaPartOfTerm)
+spatialMatrix = BMatrix*iota_ddtheta_plus_ddzeta;
+
+for L=0:(Nxi-1)
+    rowIndices = getIndex(1:NFourier2, L+1, resolutionParameters);
+    
+    % Super-diagonal term
+    if (L<Nxi-1)
+        ell = L + 1;
+        colIndices = getIndex(1:NFourier2,ell+1,resolutionParameters);
+        addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*spatialMatrix)
     end
+    
+    % Sub-diagonal term
+    if (L>0)
+        ell = L - 1;
+        colIndices = getIndex(1:NFourier2,ell+1,resolutionParameters);
+        addSparseBlock(rowIndices, colIndices, L/(2*L-1)*spatialMatrix)
+    end
+    
 end
 
 % -----------------------------------------
-% Add d/dzeta terms:
+% Add d/dxi terms:
 % -----------------------------------------
 
-for itheta=1:Ntheta
-    zetaPartOfTerm = diag(B(itheta,:))*ddzeta;
-    for ixi = 1:Nxi
-        indices = getIndex(itheta, 1:Nzeta, ixi, resolutionParameters);
-        addSparseBlock(indices, indices, xi(ixi)*zetaPartOfTerm)
+
+%spatialPartOfTerm = -(iota*dBdtheta(itheta,:)+dBdzeta(itheta,:))/2;
+spatialPartOfTerm_vec = -(1/2)*iota_ddtheta_plus_ddzeta*Bvec;
+spatialPartOfTerm = buildFourierConvolutionMatrix(ms,ns,spatialPartOfTerm_vec);
+for L=0:(Nxi-1)
+    rowIndices = getIndex(1:NFourier2, L+1, resolutionParameters);
+    
+    % Super-diagonal term
+    if (L<Nxi-1)
+        ell = L + 1;
+        colIndices = getIndex(1:NFourier2,ell+1,resolutionParameters);
+        addSparseBlock(rowIndices, colIndices, (L+1)*(L+2)/(2*L+3)*spatialPartOfTerm)
     end
-end
-
-% -----------------------------------------
-% Add mirror term:
-% -----------------------------------------
-
-xiPart = diag(1-xi.^2)*ddxi_mirror;
-spatialPart = -(iota*dBdtheta+dBdzeta)/2;
-for itheta=1:Ntheta
-    for izeta = 1:Nzeta
-        indices = getIndex(itheta, izeta, 1:Nxi, resolutionParameters);
-        addSparseBlock(indices, indices, spatialPart(itheta,izeta)*xiPart)
+    
+    % Sub-diagonal term
+    if (L>0)
+        ell = L - 1;
+        colIndices = getIndex(1:NFourier2,ell+1,resolutionParameters);
+        addSparseBlock(rowIndices, colIndices, (-L)*(L-1)/(2*L-1)*spatialPartOfTerm)
     end
+    
 end
 
 % -----------------------------------------
 % Add the diffusion (collision) term:
 % -----------------------------------------
 
-for itheta=1:Ntheta
-    for izeta=1:Nzeta
-        indices = getIndex(itheta,izeta,1:Nxi,resolutionParameters);
-        addSparseBlock(indices, indices, -nu/2*collisionOperator)
-    end
+L = (1:Nxi)-1;
+for imn=1:NFourier2
+    indices = getIndex(imn,L+1,resolutionParameters);
+    addToSparse(indices, indices, nu/2*L.*(L+1))
 end
 
-%{
 % -----------------------------------------
 % Add the extra constraint:
 % -----------------------------------------
 
-rowIndex = matrixSize;
-L = 0;
-for itheta=1:Ntheta
-    colIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-    addSparseBlock(rowIndex, colIndices, thetaWeights(itheta) * (zetaWeights') ./ (B(itheta,:) .^ 2))
+if resolutionParameters.includeConstraint
+    rowIndex = matrixSize;
+    L = 0;
+    BinvMatrixSquared = BinvMatrix*BinvMatrix;
+    colIndices = getIndex(1:NFourier2,L+1,resolutionParameters);
+    %addSparseBlock(rowIndex, colIndices, thetaWeights(itheta) * (zetaWeights') ./ (B(itheta,:) .^ 2))
+    addSparseBlock(rowIndex, colIndices, BinvMatrixSquared(1,:))
 end
 
 % -----------------------------------------
 % Add the "source" lambda:
 % -----------------------------------------
 
-colIndex = matrixSize;
-L = 0;
-for itheta=1:Ntheta
-    rowIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-    addSparseBlock(rowIndices, colIndex, ones(Nzeta,1))
+if resolutionParameters.includeConstraint
+    colIndex = matrixSize;
+    L = 0;
+    rowIndex = getIndex(1,L+1,resolutionParameters);
+    addSparseBlock(rowIndex, colIndex, 1)
 end
-%}
+
 
 % -----------------------------------------
 % Finalize the matrix
@@ -159,6 +153,7 @@ matrix = createSparse();
 
 fprintf('matrixSize: %g,  nnz: %g,  estimated nnz: %g,  sparsity: %g\n',...
     matrixSize,nnz(matrix),estimated_nnz, nnz(matrix)/(matrixSize^2))
+
 
 % ***************************************************************************
 % ***************************************************************************
@@ -170,14 +165,19 @@ fprintf('matrixSize: %g,  nnz: %g,  estimated nnz: %g,  sparsity: %g\n',...
 % Build the right-hand side
 % -----------------------------------------
 
+dBdtheta = ddtheta * Bvec;
+dBdzeta = ddzeta  * Bvec;
 rhs = zeros(matrixSize,1);
-spatialPart = (1./B) .* (geometryParameters.G * dBdtheta - geometryParameters.I * dBdzeta);
-for itheta = 1:Ntheta
-    for izeta = 1:Nzeta
-        indices = getIndex(itheta,izeta,1:Nxi,resolutionParameters);
-        rhs(indices) = (1 + xi.^2) * spatialPart(itheta,izeta);
-    end
-end
+%spatialPart = (1./B) .* (geometryParameters.G * dBdtheta - geometryParameters.I * dBdzeta);
+spatialPart = BinvMatrix * (geometryParameters.G * dBdtheta - geometryParameters.I * dBdzeta);
+
+L=0;
+indices = getIndex(1:NFourier2,L+1,resolutionParameters);
+rhs(indices) = spatialPart * (4/3);
+
+L=2;
+indices = getIndex(1:NFourier2,L+1,resolutionParameters);
+rhs(indices) = spatialPart * (2/3);
 
 
 % -----------------------------------------
@@ -186,18 +186,14 @@ end
 
 returnStruct = struct(...
     'matrixSize',matrixSize,...
-    'theta',theta,...
-    'zeta',zeta,...
-    'xi',xi,...
-    'theta2D',theta2D,...
-    'zeta2D',zeta2D,...
-    'thetaWeights',thetaWeights,...
-    'zetaWeights',zetaWeights,...
-    'xiWeights',xiWeights,...
-    'B',B,...
+    'ddtheta',ddtheta,...
+    'ddzeta',ddzeta,...
+    'BinvMatrix',BinvMatrix,...
     'dBdtheta',dBdtheta,...
     'dBdzeta',dBdzeta,...
     'matrix',matrix,...
+    'ms',ms,...
+    'ns',ns,...
     'rhs',rhs...
     );
     

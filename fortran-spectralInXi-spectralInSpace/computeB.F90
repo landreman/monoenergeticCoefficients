@@ -9,6 +9,10 @@ subroutine computeB()
 
   PetscInt :: itheta, izeta
 
+  allocate(B(Ntheta,Nzeta))
+  allocate(dBdtheta(Ntheta,Nzeta))
+  allocate(dBdzeta(Ntheta,Nzeta))
+
   do itheta = 1,Ntheta
      do izeta = 1,Nzeta
 

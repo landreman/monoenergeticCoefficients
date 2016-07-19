@@ -1,4 +1,4 @@
-#include <finclude/petscvecdef.h>
+#include <petsc/finclude/petscvecdef.h>
 
 subroutine populateRHS(vec)
 

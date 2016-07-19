@@ -11,9 +11,9 @@ geometryParameters = struct(...
     'axisymmetric',false);
 
 
-NFourierConverged = 10;
-NFouriers = 5:25;
-%NFouriers = round(linspace(25,100,15));
+NFourierConverged = 20;
+%NFouriers = 5:25;
+NFouriers = round(linspace(20,500,25));
 %NFouriers = round(linspace(60,200,20));
 
 NxiConverged = 16;

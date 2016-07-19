@@ -62,3 +62,30 @@ if resolutionParameters.includeConstraint
 end
 outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
 fprintf('Diagnostics: flux (L11) = %g, flow (L21) = %g.\n',outputs.flux,outputs.flow);
+
+
+
+mmax = max(problem.ms);
+nmax = max(abs(problem.ns))/geometryParameters.Nperiods;
+
+numPlots = min(Nxi,16);
+numCols = ceil(sqrt(numPlots));
+numRows = ceil(numPlots/numCols);
+
+figure(4)
+clf
+for whichPlot = 1:numPlots
+    subplot(numRows,numCols,whichPlot)
+    L=whichPlot-1;
+    data = NaN*zeros(mmax+1,2*nmax+1);
+    f = solution(getIndex(1:resolutionParameters.NFourier2, L+1, resolutionParameters));
+    data(1,nmax+1) = abs(f(1));
+    for imn=2:resolutionParameters.NFourier
+        data(problem.ms(imn)+1, problem.ns(imn)/geometryParameters.Nperiods+nmax+1) = sqrt(f(imn)^2 + f(imn+NFourier-1)^2);
+    end
+    imagesc([-nmax,nmax],[0,mmax],log10(data))
+    colorbar
+    xlabel('n')
+    ylabel('m')
+    title(['L=',num2str(L)])
+end

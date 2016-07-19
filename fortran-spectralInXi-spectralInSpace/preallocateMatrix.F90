@@ -4,7 +4,7 @@ subroutine preallocateMatrix(matrix)
 
   use petscmat
 
-  use variables, only: Nxi, Ntheta, Nzeta, matrixSize, numProcs, masterProc
+  use variables, only: Nxi, NFourier2, matrixSize, numProcs, masterProc
 
   implicit none
 
@@ -23,7 +23,7 @@ subroutine preallocateMatrix(matrix)
   allocate(predictedNNZsForEachRow(matrixSize))
   allocate(predictedNNZsForEachRowDiagonal(matrixSize))
   ! Set tempInt1 to the expected number of nonzeros in a row of the kinetic equation block:
-  tempInt1 = (5+5)*2 + 1
+  tempInt1 = NFourier2*2 + 2
   if (tempInt1 > matrixSize) then
      tempInt1 = matrixSize
   end if

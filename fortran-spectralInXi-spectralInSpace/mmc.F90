@@ -34,7 +34,6 @@ program mmc
 
   ! Set defaults:
   nu = 0.1d+0
-  diagonalShift = nu * 1.0d-5
   epsilon_t = -0.07053d+0
   epsilon_h = 0.05067d+0
   iota = 0.4542d+0
@@ -42,35 +41,30 @@ program mmc
   I = 0d+0
   Nperiods = 10
   helicity_l = 2
-  Ntheta = 13
-  Nzeta = 15
+  NFourier = 10
   Nxi = 16
-  thetaGridScheme = 10
-  zetaGridScheme = 10
+  mmax = 32
+  nmax = 32
 
   call readInput()
 
   ! Command-line arguments will override input.namelist:
 
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-NFourier', Ntheta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
   call PetscOptionsGetReal(PETSC_NULL_CHARACTER, '-nu', nu, wasSet, ierr)
-  call PetscOptionsGetReal(PETSC_NULL_CHARACTER, '-diagonalShift', diagonalShift, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-thetaGridScheme', thetaGridScheme, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-zetaGridScheme', zetaGridScheme, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-mmax', mmax, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-nmax', nmax, wasSet, ierr)
 
   if (masterProc) then
-     print *,"Ntheta = ",Ntheta
-     print *,"Nzeta = ",Nzeta
+     print *,"NFourier = ",NFourier
      print *,"Nxi = ",Nxi
      print *,"nu = ",nu
-     print *,"diagonalShift = ",diagonalShift
-     print *,"thetaGridScheme    = ",thetaGridScheme
-     print *,"zetaGridScheme     = ",zetaGridScheme
+     print *,"mmax = ",mmax
+     print *,"nmax = ",nmax
   end if
 
-  call createGrids()
+  call initFourier()
 
   call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
 
@@ -89,6 +83,7 @@ program mmc
   call KSPMonitorSet(ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
   call KSPGetPC(ksp, pc, ierr)
   call PCSetType(pc, PCLU, ierr)
+  call PCFactorSetMatSolverPackage(pc, MATSOLVERMUMPS, ierr)
   call KSPSetFromOptions(ksp,ierr)
 
   if (masterProc) then

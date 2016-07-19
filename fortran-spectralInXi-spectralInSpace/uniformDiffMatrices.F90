@@ -1,5 +1,5 @@
 !#include <finclude/petscsys.h>
-#include <petsc/finclude/petscsysdef.h>
+#include <finclude/petscsysdef.h>
 subroutine uniformDiffMatrices(N, xMin, xMax, scheme, x, weights, ddx, d2dx2)
   ! Finite difference and spectral differentiation matrices and integration
   ! weights for a uniform grid.

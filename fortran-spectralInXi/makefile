@@ -1,6 +1,3 @@
-EXTRA_COMPILE_FLAGS =
-EXTRA_LINK_FLAGS = 
-
 #FLINKER = ftn
 
 TARGET = mmc
@@ -11,8 +8,12 @@ OBJ_FILES = computeB.o createGrids.o diagnostics.o indices.o mmc.o populateMatri
 
 all: $(TARGET)
 
-include ${PETSC_DIR}/conf/variables
-include ${PETSC_DIR}/conf/rules
+PETSC_DIR=/opt/local/lib/petsc
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
+
+EXTRA_COMPILE_FLAGS = -I${PETSC_DIR}/include -ffree-line-length-none
+EXTRA_LINK_FLAGS = 
 
 $(TARGET): $(OBJ_FILES)
 	$(FLINKER) -o $(TARGET) $(OBJ_FILES) $(EXTRA_LINK_FLAGS) $(PETSC_LIB)

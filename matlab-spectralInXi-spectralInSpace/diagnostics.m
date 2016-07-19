@@ -37,9 +37,8 @@ flow = 4*pi*pi*tempVec(1);
 
 
 
-%VPrime = thetaWeights' * (1./B.^2) * zetaWeights;
 VPrime = BinvMatrixSquared(1,1)*4*pi*pi;
-fprintf('VPrime: %g\n',VPrime)
+%fprintf('VPrime: %g\n',VPrime)
 flow = flow * 4 / (3*sqrt(pi)*G*VPrime);
 flux = -2/(sqrt(pi)*G*G*VPrime)*flux;
 

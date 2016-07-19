@@ -4,9 +4,10 @@
 subroutine diagnostics(solution)
 
   use petscksp
-
-  use variables
+  use FourierConvolutionMatrixMod
+  use FourierTransformMod
   use indices
+  use variables
 
   implicit none
 
@@ -15,10 +16,13 @@ subroutine diagnostics(solution)
   PetscErrorCode :: ierr
   VecScatter :: VecScatterContext
   Vec :: solnOnProc0
-  PetscViewer :: viewer
-  PetscInt :: itheta, izeta, L, index
-  PetscReal :: flux, flow, VPrime, spatialPart
+  !PetscViewer :: viewer
+  PetscInt :: L, index
+  PetscReal :: flux, flow, VPrime
   PetscScalar, pointer :: solnArray(:)
+  PetscScalar, dimension(:), allocatable :: tempFourierVector
+  PetscScalar, dimension(:,:), allocatable :: tempFourierMatrix
+  integer :: imn
 
   integer :: clockStop
   real :: elapsedTime
@@ -40,43 +44,54 @@ subroutine diagnostics(solution)
   call VecScatterEnd(VecScatterContext, solution, solnOnProc0, INSERT_VALUES, SCATTER_FORWARD, ierr)
        
   if (masterProc) then
+     allocate(tempFourierVector(NFourier2))
+     allocate(tempFourierMatrix(NFourier2,NFourier2))
+
      ! Convert the PETSc vector into a normal Fortran array:
      call VecGetArrayF90(solnOnProc0, solnArray, ierr)
 
-     do itheta = 1,Ntheta
-        do izeta = 1,Nzeta
-           spatialPart = (G * dBdtheta(itheta,izeta) - I * dBdzeta(itheta,izeta))/(B(itheta,izeta) ** 3) &
-                * thetaWeights(itheta)*zetaWeights(izeta)
-
-           L = 0
-           ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-           index = getIndex(itheta,izeta,L+1)+1
-           flux = flux + solnArray(index) * spatialPart * 8/3
-
-           L = 2
-           ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-           index = getIndex(itheta,izeta,L+1)+1
-           flux = flux + solnArray(index) * spatialPart * 4/15
-
-           L = 1
-           ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-           index = getIndex(itheta,izeta,L+1)+1
-           flow = flow + solnArray(index) / B(itheta,izeta) * thetaWeights(itheta)*zetaWeights(izeta)
-        end do
+     L = 0
+     ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
+     call FourierTransform((G*dBdtheta-I*dBdzeta)/(B*B*B), tempFourierVector)
+     call FourierConvolutionMatrix(tempFourierVector,tempFourierMatrix)
+     tempFourierVector=0
+     do imn = 1,NFourier2
+        index = getIndex(imn,L+1)+1
+        tempFourierVector(imn) = solnArray(index)
      end do
+     flux = dot_product(tempFourierMatrix(1,:), tempFourierVector)*4*pi*pi * 8/3
+
+     L = 2
+     ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
+     do imn = 1,NFourier2
+        index = getIndex(imn,L+1)+1
+        tempFourierVector(imn) = solnArray(index)
+     end do
+     flux = flux + dot_product(tempFourierMatrix(1,:), tempFourierVector)*4*pi*pi * 4/15
+
+     L = 1
+     ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
+     call FourierTransform(1/B, tempFourierVector)
+     call FourierConvolutionMatrix(tempFourierVector,tempFourierMatrix)
+     do imn = 1,NFourier2
+        index = getIndex(imn,L+1)+1
+        tempFourierVector(imn) = solnArray(index)
+     end do
+     ! Take the L=1 moment of f, divide by B, and integrate over theta and zeta:
+     !flow = flow + solnArray(index) / B(itheta,izeta) * thetaWeights(itheta)*zetaWeights(izeta)
+     flow = dot_product(tempFourierMatrix(1,:), tempFourierVector)*4*pi*pi
           
      call VecRestoreArrayF90(solnOnProc0, solnArray, ierr)
 
-     VPrime = 0
-     do itheta = 1,Ntheta
-        do izeta = 1,Nzeta
-           VPrime = VPrime + thetaWeights(itheta)*zetaWeights(izeta)/(B(itheta,izeta) ** 2)
-        end do
-     end do
-     
+     call FourierTransform(1/(B*B), tempFourierVector)
+     call FourierConvolutionMatrix(tempFourierVector,tempFourierMatrix)
+     VPrime = tempFourierVector(1)*4*pi*pi
+
      flow = flow * 4 / (3*sqrtpi*G*VPrime)
      flux = -2 / (sqrtpi*G*G*VPrime)*flux
      
+     deallocate(tempFourierVector, tempFourierMatrix)
+
      call system_clock(clockStop)
      elapsedTime = real(clockStop-clockStart)/clockRate
 
@@ -90,8 +105,7 @@ subroutine diagnostics(solution)
         print *,"Error opening ", trim(filename)
         stop
      else
-        write (unit=fileUnit,fmt="(a,i5)") "Ntheta = ", Ntheta
-        write (unit=fileUnit,fmt="(a,i5)") "Nzeta  = ", Nzeta
+        write (unit=fileUnit,fmt="(a,i5)") "NFourier  = ", NFourier
         write (unit=fileUnit,fmt="(a,i5)") "Nxi    = ", Nxi
         write (unit=fileUnit,fmt="(a,es22.15)") "nu = ", nu
         write (unit=fileUnit,fmt="(a,i5)") "numProcs = ", numProcs
@@ -100,7 +114,6 @@ subroutine diagnostics(solution)
         write (unit=fileUnit,fmt="(a,es22.15)") "Time = ", elapsedTime
         close(unit=fileUnit)
      end if
-
   end if
 
 

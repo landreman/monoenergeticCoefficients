@@ -8,6 +8,8 @@ if geometryParameters.axisymmetric
     ns = zeros(size(ms));
 else
     
+    %mmax = 25;
+    %nmax = 18;
     mmax = 32;
     nmax = 32;
     Ntheta = mmax*2+3;
@@ -31,7 +33,7 @@ else
     B = 1 + epsilon_t * cos(theta2D) + epsilon_h * cos(helicity_l*theta2D-Nperiods*zeta2D);
     
     % Add B to ensure all the modes of B have a shot at being included.
-    BPower = B .^ (-2) + B;
+    BPower = B .^ (-2) + (B.^6);
     Binv = 1./B;
     
     % (slow) Fourier transform
@@ -59,16 +61,20 @@ else
             angle = m*theta2D-n*zeta2D*Nperiods;
             sinangle = sin(angle);
             cosangle = cos(angle);
-            amplitude_sin = abs(sum(sum(sinangle.*BPower)));
-            amplitude_cos = abs(sum(sum(cosangle.*BPower)));
-            amplitudes(m+1,n+nmax+1) = amplitude_sin*amplitude_sin + amplitude_cos*amplitude_cos;
+            amplitude_sin = factor*sum(sum(sinangle.*BPower));
+            amplitude_cos = factor*sum(sum(cosangle.*BPower));
+            amplitudes(m+1,n+nmax+1) = sqrt(amplitude_sin*amplitude_sin + amplitude_cos*amplitude_cos);
             Binv_Fourier2D(m+1,n+nmax+1) = factor*sum(sum(cosangle.*Binv));
         end
     end
+    amplitudes = amplitudes / (Ntheta*Nzeta);
     Binv_Fourier2D = Binv_Fourier2D / (Ntheta*Nzeta);
     
-    m=0;n=0;amplitudes(m+1,n+nmax+1) = 0; % Zero out the amplitude for m=n=0, since we will manually put this mode in the first element of the ms and ns arrays.
+    amplitudes = amplitudes - (1e-12)*sqrt(m2D.*m2D + n2D.*n2D);
+    amplitudes = amplitudes - min(min(amplitudes))+(1e-16);  % For plotting, it is handy if all the amplitudes are >0.
     
+    %m=0;n=0;amplitudes(m+1,n+nmax+1) = 0; % Zero out the amplitude for m=n=0, since we will manually put this mode in the first element of the ms and ns arrays.
+    amplitudes(m2D==0 & n2D <=0) = 0;
     
     s = numel(m2D);
     m2D_reshaped = reshape(m2D,[s,1]);

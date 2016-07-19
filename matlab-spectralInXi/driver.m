@@ -13,7 +13,31 @@ resolutionParameters = struct(...
     'Ntheta', 13,...
     'Nzeta', 15,...
     'Nxi', 16,...
-    'includeConstraint', false);
+    'includeConstraint', true);
+
+    %{
+resolutionParameters = struct(...
+    'Ntheta', 45,...
+    'Nzeta', 21,...
+    'Nxi', 65,...
+    'includeConstraint', true);
+%}
+    %{
+    % High Ntheta and Nzeta, low Nxi
+resolutionParameters = struct(...
+    'Ntheta', 45,...
+    'Nzeta', 21,...
+    'Nxi', 9,...
+    'includeConstraint', true);
+%}
+  %{  
+    % Low Ntheta and Nzeta, high Nxi
+resolutionParameters = struct(...
+    'Ntheta', 5,...
+    'Nzeta', 5,...
+    'Nxi', 65,...
+    'includeConstraint', true);
+%}
 
 % Collisionality:
 % (Typically nu << 1, so advection dominates diffusion.)
@@ -45,6 +69,22 @@ colorbar
 xlabel('\zeta')
 ylabel('\theta')
 title('B')
+
+%{
+fullMatrix = full(problem.matrix);
+tic
+cond_result = cond(fullMatrix);
+fprintf('cond: %e   Time for cond: %g\n',cond_result,toc)
+%}
+tic
+condest_result = condest(problem.matrix);
+fprintf('condest: %e   Time for condest: %g\n',condest_result,toc)
+%{
+tic
+rcond_result = rcond(fullMatrix);
+fprintf('rcond: %e   Time for rcond: %g\n',rcond_result,toc)
+%fprintf('cond=%g  condest=%g   rcond=%g\n',cond_result,condest_result,rcond_result)
+%}
 
 tic
 fprintf('Beginning solve.\n')

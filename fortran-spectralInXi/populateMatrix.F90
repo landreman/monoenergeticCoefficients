@@ -1,4 +1,4 @@
-#include <finclude/petscmatdef.h>
+#include <petsc/finclude/petscmatdef.h>
 
 subroutine populateMatrix(matrix)
 

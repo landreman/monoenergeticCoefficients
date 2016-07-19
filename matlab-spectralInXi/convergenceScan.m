@@ -10,15 +10,17 @@ geometryParameters = struct(...
     'helicity_l',2);
 
 
-NthetaConverged = 13;
-Nthetas = 9:2:29;
+NthetaConverged = 31;
+Nthetas = 21:2:55;
 
-NzetaConverged = 13;
-Nzetas = 9:2:29;
+NzetaConverged = 19;
+Nzetas = 15:2:33;
 
-NxiConverged = 16;
-Nxis = 15:25;
+NxiConverged = 50;
+%Nxis = 15:25;
+Nxis = round(linspace(30,100,15));
 
+%{
 % Collisionality, using the same normalization as in SFINCS:
 nuPrime = 0.1;
 
@@ -26,6 +28,8 @@ nuPrime = 0.1;
 Psi_Chandra = (erf(1) - 2/sqrt(pi)*exp(-1)) / 2;
 nuD = 3*sqrt(pi)/4*(erf(1) - Psi_Chandra);
 nu = nuPrime * nuD;
+%}
+nu=0.001;
 
 includeConstraint = true;
 solutionMethod = 2;

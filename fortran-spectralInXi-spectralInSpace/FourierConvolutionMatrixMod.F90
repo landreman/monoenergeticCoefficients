@@ -10,6 +10,21 @@ contains
 
   subroutine FourierConvolutionMatrix(vector, matrix)
 
+    ! Suppose we have Fourier expansions for two functions, f(theta,zeta) and B(theta,zeta):
+    ! B(theta,zeta) = \sum_{m1,n1} [ B^c_{m1,n1} cos(m1 theta - n1 zeta) + B^s_{m1,n1} sin(m1 theta - n1 zeta)
+    ! and
+    ! f(theta,zeta) = \sum_{m2,n2} [ f^c_{m2,n2} cos(m2 theta - n2 zeta) + f^2_{m2,n2} sin(m2 theta - n2 zeta).
+    ! Then using trig identities it can be shown that the product B*f can be written as follows:
+    ! B*f = (1/2) \sum_{m1,n1,m2,n2} *
+    !       [ (B^c_{m1,n1} f^c_{m2,n2} - B^s_{m1,n1} f^s_{m2,n2}) cos((m1+m2) theta - (n1+n2) zeta)
+    !        +(B^s_{m1,n1} f^c_{m2,n2} + B^c_{m1,n1} f^s_{m2,n2}) sin((m1+m2) theta - (n1+n2) zeta)
+    !        +(B^c_{m1,n1} f^c_{m2,n2} + B^s_{m1,n1} f^s_{m2,n2}) cos((m1-m2) theta - (n1-n2) zeta)
+    !        +(B^s_{m1,n1} f^c_{m2,n2} - B^c_{m1,n1} f^s_{m2,n2}) sin((m1-m2) theta - (n1-n2) zeta)].
+    !
+    ! If we think of [f^c; f^2] as a vector, then this formula above indicates that multiplying B*f amounts to
+    ! operating on the f vector by a matrix. This subroutine constructs this matrix.
+    
+
     ! vector should have been allocated with size  2*NFourier-1.
     ! matrix should have been allocated with size (2*NFourier-1, 2*NFourier-1).
 

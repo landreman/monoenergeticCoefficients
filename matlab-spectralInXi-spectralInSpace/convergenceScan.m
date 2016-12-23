@@ -13,12 +13,13 @@ geometryParameters = struct(...
 
 NFourierConverged = 20;
 %NFouriers = 5:25;
-NFouriers = round(linspace(20,500,25));
+NFouriers = 12:80;
+%NFouriers = round(linspace(12,100,25));
 %NFouriers = round(linspace(60,200,20));
 
-NxiConverged = 16;
-Nxis = 15:25;
-%Nxis = round(linspace(45,90,15));
+NxiConverged = 50;
+%Nxis = 15:25;
+Nxis = round(linspace(45,90,5));
 
 %{
 % Collisionality, using the same normalization as in SFINCS:
@@ -29,7 +30,7 @@ Psi_Chandra = (erf(1) - 2/sqrt(pi)*exp(-1)) / 2;
 nuD = 3*sqrt(pi)/4*(erf(1) - Psi_Chandra);
 nu = nuPrime * nuD;
 %}
-nu = 0.1;
+nu = 0.001;
 
 includeConstraint = true;
 solutionMethod = 2;

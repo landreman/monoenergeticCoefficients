@@ -10,8 +10,8 @@ geometryParameters = struct(...
     'helicity_l',2,...
     'axisymmetric',false);
 
-NFourier = 10;
-Nxi = 16;
+NFourier = 20;
+Nxi = 50;
 
 resolutionParameters = struct(...
     'NFourier', NFourier,...
@@ -21,7 +21,7 @@ resolutionParameters = struct(...
 
 % Collisionality:
 % (Typically nu << 1, so advection dominates diffusion.)
-nu = 0.1;
+nu = 0.001;
 
 solutionMethod = 2;
 % 1 = sparse direct solver (backslash)

@@ -47,14 +47,14 @@ resolutionParameters = struct(...
     %}
 
     resolutionParameters = struct(...
-    'Ntheta', 15,...
-    'Nzeta', 15,...
-    'Nxi', 30,...
+    'Ntheta', 25,...
+    'Nzeta', 23,...
+    'Nxi', 70,...
     'includeConstraint', true);
 
 % Collisionality:
 % (Typically nu << 1, so advection dominates diffusion.)
-nu = 1e-2;
+nu = 1e-3;
 
 solutionMethod = 2;
 % 1 = sparse direct solver (backslash)
@@ -89,9 +89,13 @@ tic
 cond_result = cond(fullMatrix);
 fprintf('cond: %e   Time for cond: %g\n',cond_result,toc)
 %}
+
+%{
 tic
 condest_result = condest(problem.matrix);
 fprintf('condest: %e   Time for condest: %g\n',condest_result,toc)
+%}
+
 %{
 tic
 rcond_result = rcond(fullMatrix);

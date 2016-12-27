@@ -10,55 +10,61 @@ geometryParameters = struct(...
     'helicity_l',2);
 
 %{
-nu=0.1;
-
 NalphaConverged = 15;
-Nalphas = 11:2:33;
+Nalphas = 11:2:39;
 
-NzetaConverged = 15;
-Nzetas = 11:2:33;
+NzetaConverged = 19;
+Nzetas = 15:2:33;
 
-NxiConverged = 15;
-Nxis = 12:30;
-%Nxis = round(linspace(30,100,15));
-%Nxis = round(linspace(10,30,15));
-% Should get L11 = -0.0329,  L12 = 0.011
-%}
-
-%{
-nu=0.01;
-    
-NalphaConverged = 15;
-Nalphas = 11:2:35;
-
-NzetaConverged = 15;
-Nzetas = 11:2:35;
-
-NxiConverged = 30;
+NxiConverged = 50;
 Nxis = 25:60;
 %Nxis = round(linspace(30,100,15));
 %Nxis = round(linspace(10,30,15));
-% Should get L11 = -0.0398,  L12 = -0.238
 %}
+%{
+NalphaConverged = 15;
+Nalphas = 11:2:39;
 
-nu=0.001;
-    
-NalphaConverged = 25;
-Nalphas = 25:2:51;
-
-NzetaConverged = 29;
-Nzetas = 21:2:59;
+NzetaConverged = 15;
+Nzetas = 11:2:39;
 
 NxiConverged = 50;
-%Nxis = 25:60;
-Nxis = round(linspace(35,100,15));
+Nxis = 25:60;
+%Nxis = round(linspace(30,100,15));
 %Nxis = round(linspace(10,30,15));
-% Should get L11 = -0.09,  L12 = -1.09
-
-
-E=1e-1;
-
+%}
 %{
+NalphaConverged = 15;
+Nalphas = 11:2:31;
+
+NzetaConverged = 15;
+Nzetas = 11:2:31;
+
+NxiConverged = 16;
+Nxis = 15:30;
+%}
+%{
+NalphaConverged = 15;
+Nalphas = 11:2:31;
+
+NzetaConverged = 15;
+Nzetas = 11:2:31;
+
+NxiConverged = 30;
+Nxis = 25:60;
+%}
+
+NalphaConverged = 19;
+Nalphas = 11:2:39;
+
+NzetaConverged = 19;
+Nzetas = 11:2:39;
+
+NxiConverged = 45;
+Nxis = round(linspace(30,90,20));
+
+    
+    %{
 % Collisionality, using the same normalization as in SFINCS:
 nuPrime = 0.1;
 
@@ -67,50 +73,23 @@ Psi_Chandra = (erf(1) - 2/sqrt(pi)*exp(-1)) / 2;
 nuD = 3*sqrt(pi)/4*(erf(1) - Psi_Chandra);
 nu = nuPrime * nuD;
 %}
-%nu=0.01;
+nu=0.001;
+E = 0;
 
+ExB_alpha_option_1 = 0;
+zeta_preconditioner_option_1  = 6;
+xi_preconditioner_option_1    = 0;
 
-discretizationParameters = struct(...
-    'alpha_derivative_option', 8, ...
-    'zeta_derivative_option', 8, ...
-    'alpha_interpolation_stencil', 4, ...
-    'include_xi_pentadiagonal_terms', true);
-
-preconditionerDiscretizationParameters = struct(...
-    'alpha_derivative_option', 0, ...
-    'zeta_derivative_option', 4, ...
-    'alpha_interpolation_stencil', 2, ...
-    'include_xi_pentadiagonal_terms', true);
+ExB_alpha_option_2 = 0;
+zeta_preconditioner_option_2  = 2;
+xi_preconditioner_option_2    = 2;
 
 includeConstraint = true;
+solutionMethod = -4;
 
-solutionMethod = 4;
-% 1 = sparse direct solver (backslash)
-% 2 = sparse direct solver (explicit LU decomposition, so memory can be monitored.)
-% 3 = GMRES with no preconditioning
-% 4 = GMRES with preconditioning
+quantitiesToRecord = {'flux','flow','time for LU','nnz(L)+nnz(U)'};
 
-% **********************************************************
-% End of input parameters.
-% **********************************************************
-
-switch discretizationParameters.zeta_derivative_option
-    case {2,4}
-        discretizationParameters.buffer_zeta_points_on_each_side = 1;
-    case {3,5,6}
-        discretizationParameters.buffer_zeta_points_on_each_side = 2;
-    case {7,8}
-        discretizationParameters.buffer_zeta_points_on_each_side = 3;
-    otherwise
-        error('Invalid discretizationParameters.zeta_derivative_option')
-end
-preconditionerDiscretizationParameters.buffer_zeta_points_on_each_side = discretizationParameters.buffer_zeta_points_on_each_side;
-
-
-
-quantitiesToRecord = {'flux','flow','time for LU','nnz(L)+nnz(U)','Num gmres iterations'};
-
-linespecs = {'.-b','.-r','.-g','.-m','.-k','.-r','.:k','.:b','.-m'};
+linespecs = {'.-b','.-r','.-g','.-m','.:c','.-r','.:k','.:b','.-m'};
 
 parametersToVary = {'N\alpha','N\zeta','N\xi'};
 abscissae = {Nalphas, Nzetas, Nxis};
@@ -135,16 +114,21 @@ for iii = 1:numel(Nalphas)
         'Nxi', NxiConverged,...
         'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
-    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, discretizationParameters);
-    preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, preconditionerDiscretizationParameters);
+    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, ...
+        ExB_alpha_option_1,zeta_preconditioner_option_1,xi_preconditioner_option_1);
+    if abs(solutionMethod)>2
+        preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, ...
+            ExB_alpha_option_2,zeta_preconditioner_option_2,xi_preconditioner_option_2);
+    else
+        preconditioner=problem;
+    end
     tic
-    [solution, totalNNZ, num_iterations] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
+    [solution, totalNNZ] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
     quantities{parameterScanNum}(iii,1)=outputs.flux;
     quantities{parameterScanNum}(iii,2)=outputs.flow;
     quantities{parameterScanNum}(iii,3)=toc;
     quantities{parameterScanNum}(iii,4)=totalNNZ;
-    quantities{parameterScanNum}(iii,5)=num_iterations;
 end
 parameterScanNum = parameterScanNum+1;
 
@@ -156,16 +140,21 @@ for iii = 1:numel(Nzetas)
         'Nxi', NxiConverged,...
         'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
-    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, discretizationParameters);
-    preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, preconditionerDiscretizationParameters);
+    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, ...
+        ExB_alpha_option_1,zeta_preconditioner_option_1,xi_preconditioner_option_1);
+    if abs(solutionMethod)>2
+        preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, ...
+            ExB_alpha_option_2,zeta_preconditioner_option_2,xi_preconditioner_option_2);
+    else
+        preconditioner=problem;
+    end
     tic
-    [solution, totalNNZ, num_iterations] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
+    [solution, totalNNZ] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
     quantities{parameterScanNum}(iii,1)=outputs.flux;
     quantities{parameterScanNum}(iii,2)=outputs.flow;
     quantities{parameterScanNum}(iii,3)=toc;
     quantities{parameterScanNum}(iii,4)=totalNNZ;
-    quantities{parameterScanNum}(iii,5)=num_iterations;
 end
 parameterScanNum = parameterScanNum+1;
 
@@ -177,16 +166,21 @@ for iii = 1:numel(Nxis)
         'Nxi', Nxis(iii),...
         'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
-    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, discretizationParameters);
-    preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, preconditionerDiscretizationParameters);
+    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, ...
+        ExB_alpha_option_1,zeta_preconditioner_option_1,xi_preconditioner_option_1);
+    if abs(solutionMethod)>2
+        preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, ...
+            ExB_alpha_option_2,zeta_preconditioner_option_2,xi_preconditioner_option_2);
+    else
+        preconditioner=problem;
+    end
     tic
-    [solution, totalNNZ, num_iterations] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
+    [solution, totalNNZ] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
     quantities{parameterScanNum}(iii,1)=outputs.flux;
     quantities{parameterScanNum}(iii,2)=outputs.flow;
     quantities{parameterScanNum}(iii,3)=toc;
     quantities{parameterScanNum}(iii,4)=totalNNZ;
-    quantities{parameterScanNum}(iii,5)=num_iterations;
 end
 parameterScanNum = parameterScanNum+1;
 
@@ -197,7 +191,7 @@ for iParameter = 1:numParameters
     mins = min([mins, quantities{iParameter}(:,:)'],[],2);
 end
 
-figure(9)
+figure(16)
 clf
 numRows = numQuantities;
 numCols = numParameters;

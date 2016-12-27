@@ -1,4 +1,4 @@
-function returnStruct = assembleMatrix(resolutionParameters, nu, E, geometryParameters,discretizationParameters)
+function returnStruct = assembleMatrix(resolutionParameters, nu, E, geometryParameters, discretizationParameters)
 
 Nalpha = resolutionParameters.Nalpha;
 Nzeta = resolutionParameters.Nzeta;
@@ -96,6 +96,8 @@ switch abs(discretizationParameters.zeta_derivative_option)
         fprintf('df/dzeta derivative: upwinded differences, 2 points on one side, 3 points on the other side.\n')
         derivative_option_plus  = 122;
         derivative_option_minus = 132;
+    otherwise
+        error('Invalid zeta_derivative_option')
 end
 fprintf('buffer_zeta_points_on_each_side: %d\n',buffer_zeta_points_on_each_side)
 Delta = (2*pi)/(geometryParameters.Nperiods*(Nzeta-2*buffer_zeta_points_on_each_side));
@@ -112,9 +114,6 @@ if discretizationParameters.zeta_derivative_option<0
     ddzeta_minus = diag(diag(ddzeta_minus));
 end
 
-ddzeta_sum        = 0.5*(ddzeta_plus+ddzeta_minus);
-ddzeta_difference = 0.5*(ddzeta_plus-ddzeta_minus);
-
 zetaWeights=ones(size(zeta));
 zetaWeights(1:buffer_zeta_points_on_each_side)         = 0;
 zetaWeights(end-buffer_zeta_points_on_each_side+1:end) = 0;
@@ -130,19 +129,113 @@ theta2D = alpha2D + geometryParameters.iota*zeta2D;
 iota = geometryParameters.iota;
 [B, dBdtheta, dBdzeta] = geometry(theta2D, zeta2D, geometryParameters);
 
+VPrime = alphaWeights' * (1./B.^2) * zetaWeights;
+FSAB2 = (alphaWeights' * ones(size(B)) * zetaWeights) / VPrime;
+
 %{
+% Build xi grid:
+xi = linspace(-1,1,Nxi+1);
+xi = xi(:);
+xi(end)=[];
+dxi = xi(2)-xi(1);
+xi = xi + dxi/2; % Make cell-centered
+
+scheme = 2; % First and last rows use one-sided 3-point stencil
+%scheme = 3; % First and last rows use one-sided 2-point stencil
+[~, ~, ddxi_mirror, ~] = m20121125_04_DifferentiationMatricesForUniformGrid(Nxi, min(xi), max(xi), scheme);
+xiWeights = zeros(size(xi))+2/Nxi;
+
+% collisionOperator = (d/dxi) (1-xi^2) (d/dxi)
+dxi2 = dxi*dxi;
+collisionOperator = ...
+    diag((1-(xi(1:end-1)+dxi/2).^2)/dxi2, 1) ...
+    - diag((1-(xi+dxi/2).^2)/dxi2 + (1-(xi-dxi/2).^2)/dxi2, 0) ...
+    + diag((1-(xi(2:end)-dxi/2).^2)/dxi2, -1);
+%}
+
+% Generate xi integration weights. We'll deal with the differentiation
+% matrices later.
+quadrature_option = discretizationParameters.xi_quadrature_option;
+derivative_option=12;
+[xi, xiWeights, ~, ~]  = uniformDiffMatrices(Nxi, -1, 1, derivative_option, quadrature_option);
+
+call_uniform_diff_matrices = true;
+switch abs(discretizationParameters.xi_derivative_option)
+    case 0
+        fprintf('df/dxi derivative is dropped.\n')
+        call_uniform_diff_matrices = false;
+        ddxi_plus  = zeros(Nxi);
+        ddxi_minus = zeros(Nxi);
+    case 2
+        fprintf('df/dxi derivative: centered differences, 1 point on each side.\n')
+        derivative_option_plus = 2;
+        derivative_option_minus = derivative_option_plus;
+    case 3
+        fprintf('df/dxi derivative: centered differences, 2 points on each side.\n')
+        derivative_option_plus = 12;
+        derivative_option_minus = derivative_option_plus;
+    case 4
+        fprintf('df/dxi derivative: upwinded differences, 0 points on one side, 1 point on the other side.\n')
+        derivative_option_plus  = 32;
+        derivative_option_minus = 42;
+    case 5
+        fprintf('df/dxi derivative: upwinded differences, 0 points on one side, 2 points on the other side.\n')
+        derivative_option_plus  = 52;
+        derivative_option_minus = 62;
+    case 6
+        fprintf('df/dxi derivative: upwinded differences, 1 points on one side, 2 points on the other side.\n')
+        derivative_option_plus  = 82;
+        derivative_option_minus = 92;
+    case 7
+        fprintf('df/dxi derivative: upwinded differences, 1 point on one side, 3 points on the other side.\n')
+        derivative_option_plus  = 102;
+        derivative_option_minus = 112;
+    case 8
+        fprintf('df/dxi derivative: upwinded differences, 2 points on one side, 3 points on the other side.\n')
+        derivative_option_plus  = 122;
+        derivative_option_minus = 132;
+    otherwise
+        error('Invalid xi_derivative_option')
+end
+if call_uniform_diff_matrices
+    [~, ~, ddxi_plus, ~]  = uniformDiffMatrices(Nxi, -1, 1, derivative_option_plus,  quadrature_option);
+    [~, ~, ddxi_minus, ~] = uniformDiffMatrices(Nxi, -1, 1, derivative_option_minus, quadrature_option);
+end
+if discretizationParameters.xi_derivative_option<0
+    ddxi_plus = diag(diag(ddxi_plus));
+    ddxi_minus = diag(diag(ddxi_minus));
+    fprintf('  But only the diagonal is kept.\n')
+end
+
+
+call_uniform_diff_matrices = true;
+switch abs(discretizationParameters.pitch_angle_scattering_option)
+    case 0
+        fprintf('Pitch angle scattering operator is dropped.\n')
+        call_uniform_diff_matrices = false;
+        pitch_angle_scattering_operator  = zeros(Nxi);
+    case 2
+        fprintf('Pitch angle scattering operator: centered differences, 1 point on each side.\n')
+        derivative_option = 2;
+    case 3
+        fprintf('Pitch angle scattering operator: centered differences, 2 points on each side.\n')
+        derivative_option = 12;
+    otherwise
+        error('Invalid pitch_angle_scattering_option')
+end
+if call_uniform_diff_matrices
+    [~, ~, ddxi, d2dxi2]  = uniformDiffMatrices(Nxi, -1, 1, derivative_option,  quadrature_option);
+end
+pitch_angle_scattering_operator = 0.5*diag(1-xi.^2)*d2dxi2 - diag(xi)*ddxi;
+if discretizationParameters.pitch_angle_scattering_option<0
+    pitch_angle_scattering_operator = diag(diag(pitch_angle_scattering_operator));
+    fprintf('  But only the diagonal is kept.\n')
+end
+
+
 estimated_nnz = ...
     Nalpha*Nzeta*Nxi*4*2 ... % ddalpha term (4 off-diagonals in alpha, 2 off-diagonals in xi)
     + Nalpha*Nzeta*Nxi*4*2 ...  % ddzeta term (4 off-diagonals in zeta, 2 off-diagonals in xi)
-    + Nalpha*Nzeta*Nxi*2 ... % ddxi term (2 off-diagonals in xi)
-    + Nalpha*Nzeta*(Nxi-1) ...   % collision term (diagonal, 0 when L=0)
-    + Nalpha*Nzeta ... % constraint term
-    + Nalpha*Nzeta; % source term
-%}
-estimated_nnz = ...
-    (1+discretizationParameters.alpha_interpolation_stencil)*Nalpha*(2*buffer_zeta_points_on_each_side)*Nxi ... % alpha interpolation
-    + 2*Nalpha*Nxi*nnz(ddzeta_sum) ...  % ddzeta_sum term (2 off-diagonals in xi)
-    + 3*Nalpha*Nxi*nnz(ddzeta_difference) ...  % ddzeta_difference term (3 off-diagonals in xi)
     + Nalpha*Nzeta*Nxi*2 ... % ddxi term (2 off-diagonals in xi)
     + Nalpha*Nzeta*(Nxi-1) ...   % collision term (diagonal, 0 when L=0)
     + Nalpha*Nzeta ... % constraint term
@@ -155,74 +248,33 @@ sparseCreator_j=0;
 sparseCreator_s=0;
 resetSparseCreator()
 
-VPrime = alphaWeights' * (1./B.^2) * zetaWeights;
-FSAB2 = (alphaWeights' * ones(size(B)) * zetaWeights) / VPrime;
-
 % ***************************************************************************
 % ***************************************************************************
 % Now populate the matrix.
 % ***************************************************************************
 % ***************************************************************************
 
-Ls = (1:Nxi)-1;
-%rowScaling = (2*Ls+1) .^ (1.5);
-rowScaling = ones(size(Ls));
-
-
 % -----------------------------------------
 % Add d/dzeta terms:
 % -----------------------------------------
 
-for ialpha=1:Nalpha
-    zetaPartOfTerm_full = diag(B(ialpha,:))*ddzeta_sum;
-    zetaPartOfTerm_sum = zetaPartOfTerm_full(zeta_to_impose_DKE,:);
-    
-    zetaPartOfTerm_full = diag(B(ialpha,:))*ddzeta_difference;
-    zetaPartOfTerm_difference = zetaPartOfTerm_full(zeta_to_impose_DKE,:);
-    
-    for L=0:(Nxi-1)
-        rowIndices = getIndex(ialpha, zeta_to_impose_DKE, L+1, resolutionParameters);
-        
-        % Diagonal term
-        ell = L;
-        colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-        addSparseBlock(rowIndices, colIndices, (2*L*L+2*L-1)/((2*L+3)*(2*L-1))*zetaPartOfTerm_difference*rowScaling(L+1))
-        
-        % Super-diagonal term
-        if (L<Nxi-1)
-            ell = L + 1;
-            colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*zetaPartOfTerm_sum*rowScaling(L+1))
-        end
-        
-        % Sub-diagonal term
-        if (L>0)
-            ell = L - 1;
-            colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, L/(2*L-1)*zetaPartOfTerm_sum*rowScaling(L+1))
-        end
-        
-        if discretizationParameters.include_xi_pentadiagonal_terms
-            % Super-super-diagonal term
-            if (L<Nxi-2)
-                ell = L + 2;
-                colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-                addSparseBlock(rowIndices, colIndices, (L+2)*(L+1)/((2*L+5)*(2*L+3))*zetaPartOfTerm_difference*rowScaling(L+1))
-            end
-            
-            % Sub-sub-diagonal term
-            if (L>1)
-                ell = L - 2;
-                colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-                addSparseBlock(rowIndices, colIndices, (L-1)*L/((2*L-3)*(2*L-1))*zetaPartOfTerm_difference*rowScaling(L+1))
-            end
-        end
+for ixi = 1:Nxi
+    if xi(ixi)>0
+        ddzeta_to_use = ddzeta_plus;
+    else
+        ddzeta_to_use = ddzeta_minus;
+    end
+    for ialpha=1:Nalpha
+        stuffToAdd = xi(ixi)*diag(B(ialpha,:))*ddzeta_to_use;
+        indices = getIndex(ialpha, 1:Nzeta, ixi, resolutionParameters);
+        addSparseBlock(indices(zeta_to_impose_DKE), indices, stuffToAdd(zeta_to_impose_DKE,:))
     end
 end
 
 % -----------------------------------------
-% Add d/alpha term:
+% Add electric field d/dalpha terms:
 % -----------------------------------------
+
 factor = (geometryParameters.iota*E/FSAB2)*(1 + geometryParameters.iota*geometryParameters.I/geometryParameters.G);
 if factor>0
     ddalpha_to_use = ddalpha_plus;
@@ -231,15 +283,16 @@ else
 end
 for izeta = zeta_to_impose_DKE
     stuffToAdd = factor*diag(B(:,izeta).^2)*ddalpha_to_use;
-    for L=0:(Nxi-1)
-        indices = getIndex(1:Nalpha, izeta, L+1, resolutionParameters);
-        addSparseBlock(indices, indices, stuffToAdd*rowScaling(L+1))
+    for ixi = 1:Nxi
+        indices = getIndex(1:Nalpha, izeta, ixi, resolutionParameters);
+        addSparseBlock(indices, indices, stuffToAdd)
     end
 end
 
 % -----------------------------------------
 % Add periodicity constraints:
 % -----------------------------------------
+
 
 % First handle the points needed by the DKE to the left of zeta=0:
 theta_left = alpha;
@@ -318,29 +371,24 @@ for ixi = 1:Nxi
     end
 end
 
+
+
 % -----------------------------------------
-% Add d/dxi terms:
+% Add mirror term:
 % -----------------------------------------
 
+xiPart_plus = diag(1-xi.^2)*ddxi_plus;
+xiPart_minus = diag(1-xi.^2)*ddxi_minus;
+spatialPart = -(iota*dBdtheta+dBdzeta)/2;
 for ialpha=1:Nalpha
-    spatialPartOfTerm = -(iota*dBdtheta(ialpha,zeta_to_impose_DKE)+dBdzeta(ialpha,zeta_to_impose_DKE))/2;
-    for L=0:(Nxi-1)
-        rowIndices = getIndex(ialpha, zeta_to_impose_DKE, L+1, resolutionParameters);
-        
-        % Super-diagonal term
-        if (L<Nxi-1)
-            ell = L + 1;
-            colIndices = getIndex(ialpha,zeta_to_impose_DKE,ell+1,resolutionParameters);
-            addToSparse(rowIndices, colIndices, (L+1)*(L+2)/(2*L+3)*spatialPartOfTerm*rowScaling(L+1))
+    for izeta = zeta_to_impose_DKE
+        if spatialPart(ialpha,izeta)>0
+            xiPart_to_use = xiPart_plus;
+        else
+            xiPart_to_use = xiPart_minus;
         end
-        
-        % Sub-diagonal term
-        if (L>0)
-            ell = L - 1;
-            colIndices = getIndex(ialpha,zeta_to_impose_DKE,ell+1,resolutionParameters);
-            addToSparse(rowIndices, colIndices, (-L)*(L-1)/(2*L-1)*spatialPartOfTerm*rowScaling(L+1))
-        end
-        
+        indices = getIndex(ialpha, izeta, 1:Nxi, resolutionParameters);
+        addSparseBlock(indices, indices, spatialPart(ialpha,izeta)*xiPart_to_use)
     end
 end
 
@@ -348,17 +396,10 @@ end
 % Add the diffusion (collision) term:
 % -----------------------------------------
 
-L = (1:Nxi)-1;
-stuffToAdd = nu/2*L.*(L+1).*rowScaling;
-%if discretizationParameters.alpha_interpolation_stencil==100 || discretizationParameters.alpha_interpolation_stencil==1
-if discretizationParameters.alpha_interpolation_stencil==100
-    stuffToAdd(1)=stuffToAdd(2);
-end
 for ialpha=1:Nalpha
     for izeta=zeta_to_impose_DKE
-        indices = getIndex(ialpha,izeta,L+1,resolutionParameters);
-        %addToSparse(indices, indices, nu/2*L.*(L+1).*rowScaling)
-        addToSparse(indices, indices, stuffToAdd)
+        indices = getIndex(ialpha,izeta,1:Nxi,resolutionParameters);
+        addSparseBlock(indices, indices, -nu*pitch_angle_scattering_operator)
     end
 end
 
@@ -368,11 +409,13 @@ end
 % -----------------------------------------
 
 if resolutionParameters.includeConstraint
+    stuffToAdd = xiWeights(:)';
     rowIndex = matrixSize;
-    L = 0;
     for ialpha=1:Nalpha
-        colIndices = getIndex(ialpha,1:Nzeta,L+1,resolutionParameters);
-        addSparseBlock(rowIndex, colIndices, (1e0)*alphaWeights(ialpha) * (zetaWeights') ./ (B(ialpha,:) .^ 2))
+        for izeta=1:Nzeta
+            colIndices = getIndex(ialpha,izeta,1:Nxi,resolutionParameters);
+            addSparseBlock(rowIndex, colIndices, stuffToAdd*(alphaWeights(ialpha) * zetaWeights(izeta) / (B(ialpha,izeta)^ 2)))
+        end
     end
 end
 
@@ -382,10 +425,11 @@ end
 
 if resolutionParameters.includeConstraint
     colIndex = matrixSize;
-    L = 0;
     for ialpha=1:Nalpha
-        rowIndices = getIndex(ialpha,zeta_to_impose_DKE,L+1,resolutionParameters);
-        addSparseBlock(rowIndices, colIndex, (1e0)*ones(numel(zeta_to_impose_DKE),1)*rowScaling(1))
+        for izeta = zeta_to_impose_DKE
+            rowIndices = getIndex(ialpha,izeta,1:Nxi,resolutionParameters);
+            addSparseBlock(rowIndices, colIndex, ones(Nxi,1))
+        end
     end
 end
 
@@ -410,13 +454,10 @@ fprintf('matrixSize: %g,  nnz: %g,  estimated nnz: %g,  sparsity: %g\n',...
 rhs = zeros(matrixSize,1);
 spatialPart = (1./B) .* (geometryParameters.G * dBdtheta - geometryParameters.I * dBdzeta);
 for ialpha=1:Nalpha
-    L=0;
-    indices = getIndex(ialpha,zeta_to_impose_DKE,L+1,resolutionParameters);
-    rhs(indices) = spatialPart(ialpha,zeta_to_impose_DKE) * (4/3) * rowScaling(L+1);
-    
-    L=2;
-    indices = getIndex(ialpha,zeta_to_impose_DKE,L+1,resolutionParameters);
-    rhs(indices) = spatialPart(ialpha,zeta_to_impose_DKE) * (2/3) * rowScaling(L+1);
+    for izeta = zeta_to_impose_DKE
+        indices = getIndex(ialpha,izeta,1:Nxi,resolutionParameters);
+        rhs(indices) = (1 + xi.^2) * spatialPart(ialpha,izeta);
+    end
 end
 
 
@@ -428,18 +469,16 @@ returnStruct = struct(...
     'matrixSize',matrixSize,...
     'alpha',alpha,...
     'zeta',zeta,...
+    'xi',xi,...
     'alpha2D',alpha2D,...
     'theta2D',theta2D,...
     'zeta2D',zeta2D,...
     'alphaWeights',alphaWeights,...
     'zetaWeights',zetaWeights,...
+    'xiWeights',xiWeights,...
     'B',B,...
     'dBdtheta',dBdtheta,...
     'dBdzeta',dBdzeta,...
-    'ddzeta_plus',ddzeta_plus,...
-    'ddzeta_minus',ddzeta_minus,...
-    'ddzeta_sum',ddzeta_sum,...
-    'ddzeta_difference',ddzeta_difference,...
     'matrix',matrix,...
     'rhs',rhs...
     );

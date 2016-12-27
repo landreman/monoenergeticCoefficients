@@ -2,14 +2,13 @@ clear
 
 geometryParameters = struct(...
     'epsilon_t',-0.07053,...
-    'epsilon_h',0.05067,...    
+    'epsilon_h',0.05067,...
     'iota',0.4542,...
-    'I',0,...
     'G',3.7481,...
+    'I',0,...
     'Nperiods',10,...
     'helicity_l',2);
 
-%    'iota',0.9542,... % To get an interpolation matrix shift by 3 at Nalpha=27
 
 %{
 nu = 0.1;
@@ -39,30 +38,33 @@ resolutionParameters = struct(...
     'includeConstraint', true);
 % Should get L11 = -0.09,  L12 = -1.09
 
-%E=0;
-E=1;
-    
-% Collisionality:
-% (Typically nu << 1, so advection dominates diffusion.)
-%nu = 0.001;
 
+%E=0.1;
+E=0;
+    
 solutionMethod = 4;
 % 1 = sparse direct solver (backslash)
 % 2 = sparse direct solver (explicit LU decomposition, so memory can be monitored.)
 % 3 = GMRES with no preconditioning
 % 4 = GMRES with preconditioning
+% -4 = same as 4 but no plot.
+
 
 discretizationParameters = struct(...
     'alpha_derivative_option', 8, ...
     'zeta_derivative_option', 8, ...
     'alpha_interpolation_stencil', 4, ...
-    'include_xi_pentadiagonal_terms', true);
+    'xi_derivative_option', 3, ...
+    'pitch_angle_scattering_option', 3, ...
+    'xi_quadrature_option',3);
 
 preconditionerDiscretizationParameters = struct(...
-    'alpha_derivative_option', -8, ...
+    'alpha_derivative_option', 0, ...
     'zeta_derivative_option', 4, ...
     'alpha_interpolation_stencil', 1, ...
-    'include_xi_pentadiagonal_terms', true);
+    'xi_derivative_option', 2, ...
+    'pitch_angle_scattering_option', 2, ...
+    'xi_quadrature_option',3);
 
 
 % **********************************************************
@@ -83,9 +85,9 @@ preconditionerDiscretizationParameters.buffer_zeta_points_on_each_side = discret
 
 tic
 fprintf('Building main matrix.\n')
-problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, discretizationParameters);
+problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters,discretizationParameters);
 fprintf('Building preconditioner matrix.\n')
-preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, preconditionerDiscretizationParameters);
+preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters,preconditionerDiscretizationParameters);
 fprintf('Time to assemble matrix: %g sec\n',toc)
 
 figure(1)
@@ -113,15 +115,27 @@ ylabel('\theta')
 title('B')
 
 %{
+fullMatrix = full(problem.matrix);
+tic
+cond_result = cond(fullMatrix);
+fprintf('cond: %e   Time for cond: %g\n',cond_result,toc)
+%}
+%{
 tic
 condest_result = condest(problem.matrix);
 fprintf('condest: %e   Time for condest: %g\n',condest_result,toc)
 %}
+%{
+tic
+rcond_result = rcond(fullMatrix);
+fprintf('rcond: %e   Time for rcond: %g\n',rcond_result,toc)
+%fprintf('cond=%g  condest=%g   rcond=%g\n',cond_result,condest_result,rcond_result)
+%}
 
 tic
 fprintf('Beginning solve.\n')
-[solution, totalNNZ, num_iterations] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
-fprintf('Done. Time for solve: %g sec.  Num iterations: %d\n',toc,num_iterations)
+[solution, totalNNZ] = solver(problem.matrix, problem.rhs, preconditioner.matrix, solutionMethod);
+fprintf('Done. Time for solve: %g sec\n',toc)
 
 if resolutionParameters.includeConstraint
     fprintf('Source: %g  (Should be within machine precision of 0)\n',solution(end))

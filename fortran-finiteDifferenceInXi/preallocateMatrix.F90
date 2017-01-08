@@ -1,4 +1,9 @@
+#include "PETScVersions.F90"
+#if (PETSC_VERSION_MAJOR < 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR < 6))
 #include <finclude/petscmatdef.h>
+#else
+#include <petsc/finclude/petscmatdef.h>
+#endif
 
 subroutine preallocateMatrix(matrix, whichMatrix)
 
@@ -24,7 +29,7 @@ subroutine preallocateMatrix(matrix, whichMatrix)
   allocate(predictedNNZsForEachRow(matrixSize))
   allocate(predictedNNZsForEachRowDiagonal(matrixSize))
   ! Set tempInt1 to the expected number of nonzeros in a row of the kinetic equation block:
-  tempInt1 = 5 + 4 + 4
+  tempInt1 = 6 + (6-1) + (6-1)
   if (tempInt1 > matrixSize) then
      tempInt1 = matrixSize
   end if
@@ -79,7 +84,7 @@ subroutine preallocateMatrix(matrix, whichMatrix)
 
 
   ! If any mallocs are required during matrix assembly, do not generate an error:
-  call MatSetOption(matrix, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, ierr)
+  !call MatSetOption(matrix, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE, ierr)
 
 
 end subroutine preallocateMatrix

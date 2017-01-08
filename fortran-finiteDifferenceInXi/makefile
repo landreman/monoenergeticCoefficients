@@ -1,4 +1,6 @@
-EXTRA_COMPILE_FLAGS =
+PETSC_DIR=/opt/local/lib/petsc
+
+EXTRA_COMPILE_FLAGS = -I${PETSC_DIR}/include -ffree-line-length-none
 EXTRA_LINK_FLAGS = 
 
 #FLINKER = ftn
@@ -11,8 +13,12 @@ OBJ_FILES = computeB.o createGrids.o diagnostics.o indices.o mmc.o populateMatri
 
 all: $(TARGET)
 
-include ${PETSC_DIR}/conf/variables
-include ${PETSC_DIR}/conf/rules
+# The next 2 lines work for PETSc version 3.6.0 and later:                                                                    
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
+# PETSc versions before 3.6.0:
+#include ${PETSC_DIR}/conf/variables
+#include ${PETSC_DIR}/conf/rules
 
 $(TARGET): $(OBJ_FILES)
 	$(FLINKER) -o $(TARGET) $(OBJ_FILES) $(EXTRA_LINK_FLAGS) $(PETSC_LIB)

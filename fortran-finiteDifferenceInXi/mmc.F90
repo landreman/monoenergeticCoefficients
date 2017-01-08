@@ -1,6 +1,11 @@
 ! Main program
 
+#include "PETScVersions.F90"
+#if (PETSC_VERSION_MAJOR < 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR < 6))
 #include <finclude/petsckspdef.h>
+#else
+#include <petsc/finclude/petsckspdef.h>
+#endif
 
 program mmc
 
@@ -22,7 +27,7 @@ program mmc
   PetscInt :: userContext ! Not used
   Mat :: matrix, pcMatrix
 
-  external populateMatrix, populateRHS
+  !external populateMatrix, populateRHS
 
   call PETSCInitialize(PETSC_NULL_CHARACTER, ierr)
   call MPI_COMM_SIZE(PETSC_COMM_WORLD, numProcs, ierr)
@@ -43,29 +48,51 @@ program mmc
   Ntheta = 13
   Nzeta = 15
   Nxi = 16
-  thetaGridScheme = 2
-  thetaGridScheme_pc = 3
-  zetaGridScheme = 2
-  zetaGridScheme_pc = 3
+
+  theta_derivative_option = 8
+  preconditioner_theta_derivative_option = 4
+  zeta_derivative_option = 8
+  preconditioner_zeta_derivative_option = 4
+  xi_derivative_option = 3
+  preconditioner_xi_derivative_option = 2
+  pitch_angle_scattering_option = 3
+  preconditioner_pitch_angle_scattering_option = 2
+
+  xi_quadrature_option = 3
+  constraint_option = 1
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
   call PetscOptionsGetReal(PETSC_NULL_CHARACTER, '-nu', nu, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-thetaGridScheme', thetaGridScheme, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-thetaGridScheme_pc', thetaGridScheme_pc, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-zetaGridScheme', zetaGridScheme, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-zetaGridScheme_pc', zetaGridScheme_pc, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-theta_derivative_option', theta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_theta_derivative_option', preconditioner_theta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-zeta_derivative_option', zeta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_zeta_derivative_option', preconditioner_zeta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-xi_derivative_option', xi_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_xi_derivative_option', preconditioner_xi_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-pitch_angle_scattering_option', pitch_angle_scattering_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_pitch_angle_scattering_option', preconditioner_pitch_angle_scattering_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-xi_quadrature_option', xi_quadrature_option, wasSet, ierr)
+  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-constraint_option', constraint_option, wasSet, ierr)
 
   if (masterProc) then
      print *,"Ntheta = ",Ntheta
      print *,"Nzeta = ",Nzeta
      print *,"Nxi = ",Nxi
      print *,"nu = ",nu
-     print *,"thetaGridScheme    = ",thetaGridScheme
-     print *,"thetaGridScheme_pc = ",thetaGridScheme_pc
-     print *,"zetaGridScheme     = ",zetaGridScheme
-     print *,"zetaGridScheme_pc  = ",zetaGridScheme_pc
+     print *,"theta_derivative_option = ",theta_derivative_option
+     print *,"preconditioner_theta_derivative_option = ",preconditioner_theta_derivative_option
+     print *,"zeta_derivative_option = ",zeta_derivative_option
+     print *,"preconditioner_zeta_derivative_option = ",preconditioner_zeta_derivative_option
+     print *,"xi_derivative_option = ",xi_derivative_option
+     print *,"preconditioner_xi_derivative_option = ",preconditioner_xi_derivative_option
+     print *,"pitch_angle_scattering_option = ",pitch_angle_scattering_option
+     print *,"preconditioner_pitch_angle_scattering_option = ",preconditioner_pitch_angle_scattering_option
+     print *,"xi_quadrature_option = ",xi_quadrature_option
+     print *,"constraint_option = ",constraint_option
   end if
+
+  if (constraint_option<0 .or. constraint_option>2) stop "Invalid constraint_option"
 
   call createGrids()
 

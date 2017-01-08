@@ -1,11 +1,18 @@
+#include "PETScVersions.F90"
+#if (PETSC_VERSION_MAJOR < 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR < 6))
+#include <finclude/petscsysdef.h>
+#else
+#include <petsc/finclude/petscsysdef.h>
+#endif
+
 subroutine computeB()
 
   use variables, only: Ntheta, Nzeta, epsilon_t, epsilon_h, helicity_l, Nperiods, B, dBdtheta, dBdzeta, theta, zeta
 
   implicit none
   
-!#include <finclude/petscsys.h>
-#include <finclude/petscsysdef.h>
+!!#include <finclude/petscsys.h>
+!#include <finclude/petscsysdef.h>
 
   PetscInt :: itheta, izeta
 

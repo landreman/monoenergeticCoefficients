@@ -158,6 +158,36 @@ resetSparseCreator()
 VPrime = alphaWeights' * (1./B.^2) * zetaWeights;
 FSAB2 = (alphaWeights' * ones(size(B)) * zetaWeights) / VPrime;
 
+if discretizationParameters.piecewise_upwinding
+    fprintf('Computing Legendre integrals.\n')
+    LegendreIntegrals0 = zeros(Nxi,1);
+    LegendreIntegrals1 = zeros(Nxi,1);
+    for L=0:(Nxi-1)
+        LegendreIntegrals0(L+1) = integral(@integrand0,0,1);
+        LegendreIntegrals1(L+1) = integral(@integrand1,0,1);
+    end
+    
+    Ls=(1:Nxi)-1;
+    LegendreIntegrals2 = (Ls+1)./((2*Ls+1).*(2*Ls+3));
+    LegendreIntegrals1-LegendreIntegrals2(:)
+end
+
+    function zz=integrand0(xi)
+        P = legendre(L,xi);
+        P = P(1,:);
+        P = reshape(P,size(xi));
+        zz = xi.*P.*P;
+    end
+
+    function zz=integrand1(xi)
+        P = legendre(L,xi);
+        P = P(1,:);
+        Q = legendre(L+1,xi);
+        Q = Q(1,:);
+        PQ = reshape(P.*Q,size(xi));
+        zz = xi.*PQ;
+    end
+
 % ***************************************************************************
 % ***************************************************************************
 % Now populate the matrix.
@@ -172,50 +202,64 @@ rowScaling = ones(size(Ls));
 % -----------------------------------------
 % Add d/dzeta terms:
 % -----------------------------------------
-
 for ialpha=1:Nalpha
     zetaPartOfTerm_full = diag(B(ialpha,:))*ddzeta_sum;
     zetaPartOfTerm_sum = zetaPartOfTerm_full(zeta_to_impose_DKE,:);
     
     zetaPartOfTerm_full = diag(B(ialpha,:))*ddzeta_difference;
-    zetaPartOfTerm_difference = zetaPartOfTerm_full(zeta_to_impose_DKE,:);
+    zetaPartOfTerm_difference_diagInXi = zetaPartOfTerm_full(zeta_to_impose_DKE,:);
+    if discretizationParameters.xi_pentadiagonal_terms_option==2
+        zetaPartOfTerm_full = diag(diag(zetaPartOfTerm_full));
+    end
+    zetaPartOfTerm_difference_pentadiagInXi = zetaPartOfTerm_full(zeta_to_impose_DKE,:);
     
     for L=0:(Nxi-1)
         rowIndices = getIndex(ialpha, zeta_to_impose_DKE, L+1, resolutionParameters);
         
-        % Diagonal term
-        ell = L;
-        colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-        addSparseBlock(rowIndices, colIndices, (2*L*L+2*L-1)/((2*L+3)*(2*L-1))*zetaPartOfTerm_difference*rowScaling(L+1))
-        
-        % Super-diagonal term
-        if (L<Nxi-1)
-            ell = L + 1;
+        if ~ discretizationParameters.piecewise_upwinding
+            % Diagonal term
+            ell = L;
             colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*zetaPartOfTerm_sum*rowScaling(L+1))
-        end
-        
-        % Sub-diagonal term
-        if (L>0)
-            ell = L - 1;
-            colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-            addSparseBlock(rowIndices, colIndices, L/(2*L-1)*zetaPartOfTerm_sum*rowScaling(L+1))
-        end
-        
-        if discretizationParameters.include_xi_pentadiagonal_terms
-            % Super-super-diagonal term
-            if (L<Nxi-2)
-                ell = L + 2;
-                colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-                addSparseBlock(rowIndices, colIndices, (L+2)*(L+1)/((2*L+5)*(2*L+3))*zetaPartOfTerm_difference*rowScaling(L+1))
+            addSparseBlock(rowIndices, colIndices, (2*L*L+2*L-1)/((2*L+3)*(2*L-1))*zetaPartOfTerm_difference_diagInXi*rowScaling(L+1))
+            
+            if discretizationParameters.include_streaming_xi_tridiagonal_terms
+                % Super-diagonal term
+                if (L<Nxi-1)
+                    ell = L + 1;
+                    colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
+                    addSparseBlock(rowIndices, colIndices, (L+1)/(2*L+3)*zetaPartOfTerm_sum*rowScaling(L+1))
+                end
+                
+                % Sub-diagonal term
+                if (L>0)
+                    ell = L - 1;
+                    colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
+                    addSparseBlock(rowIndices, colIndices, L/(2*L-1)*zetaPartOfTerm_sum*rowScaling(L+1))
+                end
             end
             
-            % Sub-sub-diagonal term
-            if (L>1)
-                ell = L - 2;
-                colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
-                addSparseBlock(rowIndices, colIndices, (L-1)*L/((2*L-3)*(2*L-1))*zetaPartOfTerm_difference*rowScaling(L+1))
+            if discretizationParameters.xi_pentadiagonal_terms_option ~= 0
+                % Super-super-diagonal term
+                if (L<Nxi-2)
+                    ell = L + 2;
+                    colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
+                    addSparseBlock(rowIndices, colIndices, (L+2)*(L+1)/((2*L+5)*(2*L+3))*zetaPartOfTerm_difference_pentadiagInXi*rowScaling(L+1))
+                end
+                
+                % Sub-sub-diagonal term
+                if (L>1)
+                    ell = L - 2;
+                    colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
+                    addSparseBlock(rowIndices, colIndices, (L-1)*L/((2*L-3)*(2*L-1))*zetaPartOfTerm_difference_pentadiagInXi*rowScaling(L+1))
+                end
             end
+        else
+            % DO use the piecewise-interval upwinding
+            
+            % Diagonal term
+            ell = L;
+            colIndices = getIndex(ialpha,1:Nzeta,ell+1,resolutionParameters);
+            addSparseBlock(rowIndices, colIndices, LegendreIntegrals0(L+1)*(2*L+1)/(2)*zetaPartOfTerm_difference_diagInXi*rowScaling(L+1))
         end
     end
 end
@@ -261,8 +305,9 @@ if discretizationParameters.alpha_interpolation_stencil<3
     assignin('base','alpha_interpolation_matrix_left',interpolationMatrix)
 end
 for ixi = 1:Nxi
-    %if ixi>preconditioner_min_L && preconditioner
-    if false
+    if ixi>discretizationParameters.preconditioner_alpha_min_L
+    %if false
+        %interpolationMatrixToUse = zeros(Nalpha);
         interpolationMatrixToUse = eye(Nalpha);
     else
         interpolationMatrixToUse = interpolationMatrix;
@@ -300,8 +345,10 @@ end
 izetas = (Nzeta-buffer_zeta_points_on_each_side+1):Nzeta;
 
 for ixi = 1:Nxi
+    if ixi>discretizationParameters.preconditioner_alpha_min_L
     %if ixi>preconditioner_min_L && preconditioner
-    if false
+    %if false
+        %interpolationMatrixToUse = zeros(Nalpha);
         interpolationMatrixToUse = eye(Nalpha);
     else
         interpolationMatrixToUse = interpolationMatrix;

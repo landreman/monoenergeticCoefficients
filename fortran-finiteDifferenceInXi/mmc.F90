@@ -26,6 +26,9 @@ program mmc
   Vec :: rhs, solution
   PetscInt :: userContext ! Not used
   Mat :: matrix, pcMatrix
+#if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
+  PetscViewerAndFormat vf
+#endif
 
   !external populateMatrix, populateRHS
 
@@ -59,7 +62,7 @@ program mmc
   preconditioner_pitch_angle_scattering_option = 2
 
   xi_quadrature_option = 3
-  constraint_option = 1
+  constraint_option = 2
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
@@ -113,7 +116,12 @@ program mmc
 
 !  call KSPSetComputeRHS(ksp,populateRHS,userContext,ierr)
 !  call KSPSetComputeOperators(ksp,populateMatrix,userContext,ierr)
+#if (PETSC_VERSION_MAJOR < 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR < 7))
   call KSPMonitorSet(ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
+#else
+  call PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, vf, ierr) 
+  call KSPMonitorSet(KSPInstance, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
+#endif
   call KSPSetFromOptions(ksp,ierr)
 
   if (masterProc) then

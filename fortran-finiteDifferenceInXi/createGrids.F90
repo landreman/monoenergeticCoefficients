@@ -734,9 +734,19 @@ subroutine createGrids()
        if (masterProc) then
           print *,"d/dxi derivatives discretized using upwinded finite differences:"
           print *,"   2 point on one side, 3 points on the other side."
+          print *,"   High accuracy at the domain ends, though upwinding breaks down there."
        end if
        derivative_option_plus  = 122
        derivative_option_minus = 132
+
+    case (9)
+       if (masterProc) then
+          print *,"d/dxi derivatives discretized using upwinded finite differences:"
+          print *,"   2 point on one side, 3 points on the other side."
+          print *,"   Upwinding all the way to the domain ends, meaning lower accuracy there."
+       end if
+       derivative_option_plus  = 123
+       derivative_option_minus = 133
 
     case default
        if (masterProc) then
@@ -822,9 +832,19 @@ subroutine createGrids()
        if (masterProc) then
           print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
           print *,"   2 point on one side, 3 points on the other side."
+          print *,"   High accuracy at the domain ends, though upwinding breaks down there."
        end if
        derivative_option_plus  = 122
        derivative_option_minus = 132
+
+    case (9)
+       if (masterProc) then
+          print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+          print *,"   2 point on one side, 3 points on the other side."
+          print *,"   Upwinding all the way to the domain ends, meaning lower accuracy there."
+       end if
+       derivative_option_plus  = 123
+       derivative_option_minus = 133
 
     case default
        if (masterProc) then
@@ -878,6 +898,16 @@ subroutine createGrids()
   allocate(dBdtheta(Ntheta,Nzeta))
   allocate(dBdzeta(Ntheta,Nzeta))
   call computeB()
+
+
+  print *,"Here comes ddxi_plus:"
+  do j=1,Nxi
+     print *,ddxi_plus(j,:)
+  end do
+  print *,"Here comes ddxi_minus:"
+  do j=1,Nxi
+     print *,ddxi_minus(j,:)
+  end do
 
 end subroutine createGrids
 

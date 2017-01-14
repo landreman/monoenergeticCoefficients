@@ -107,11 +107,17 @@ subroutine uniformDiffMatrices(N, xMin, xMax, option, quadrature_option, x, weig
   !       Stencil has 2 points on 1 side, 3 points on the other side
   ! 121 = Same as 120, but with no grid point at xMin and with a grid point at xMax.
   ! 122 = Same as 120, but aperiodic, with grid points at both xMin and xMax.
+  !       The first and last rows use at least a 5 point stencil, so there is
+  !       no upwinding or backwards upwinding for 3 rows.
+  ! 123 = Same as 122, but the first and last rows all are strictly upwinded
+  !       so the diagonal is everywhere positive, except for the first row.
   ! 130 = Periodic with a grid point at xMin but not xMax.
   !       1st derivative only. Upwinded to the right.
   !       Stencil has 2 points on 1 side, 3 points on the other side
   ! 131 = Same as 130, but with no grid point at xMin and with a grid point at xMax.
   ! 132 = Same as 130, but aperiodic, with grid points at both xMin and xMax.
+  ! 133 = Same as 132, but the first and last rows all are strictly upwinded
+  !       so the diagonal is everywhere negative, except for the last row.
   !
   ! Options for quadrature_option:
   ! 0 = Standard trapezoid rule: half weight at the first and last grid points.
@@ -165,7 +171,7 @@ subroutine uniformDiffMatrices(N, xMin, xMax, option, quadrature_option, x, weig
   ! ***************************************************************
 
   select case (option)
-  case (2, 3, 12, 13, 14, 15, 16, 32, 42, 52, 62, 82, 92, 102, 112, 122, 132)
+  case (2, 3, 12, 13, 14, 15, 16, 32, 42, 52, 62, 82, 92, 102, 112, 122, 123, 132, 133)
      ! Include points at both xMin and xMax:
      x = [( (xMax-xMin)*i/(N-1)+xMin, i=0,N-1 )]
   case (0,10,20,30,40,50,60,80,90,100,110,120,130)
@@ -188,7 +194,7 @@ subroutine uniformDiffMatrices(N, xMin, xMax, option, quadrature_option, x, weig
 
   weights=dx
   select case (option)
-  case (2, 3, 12, 13, 14, 15, 16, 32, 42, 52, 62, 82, 92, 102, 112, 122, 132)
+  case (2, 3, 12, 13, 14, 15, 16, 32, 42, 52, 62, 82, 92, 102, 112, 122, 123, 132, 133)
      ! Grid is aperiodic
      select case (quadrature_option)
      case (0)
@@ -539,11 +545,11 @@ subroutine uniformDiffMatrices(N, xMin, xMax, option, quadrature_option, x, weig
         ddx(i,i+3) =  1/(12*dx)
      end do
 
-  case (120,121,122)
+  case (120,121,122,123)
      ! upwinding, with 2 points on 1 side, and 3 points on the other side.
 
      if (N<5) then
-        print *,"Error! N must be at least 5 for option 120,121,122"
+        print *,"Error! N must be at least 5 for option 120,121,122,123"
         stop
      end if
      do i=1,N
@@ -555,11 +561,11 @@ subroutine uniformDiffMatrices(N, xMin, xMax, option, quadrature_option, x, weig
         ddx(i,modulo(i-4,N)+1) = -1/(30*dx)
      end do
 
-  case (130,131,132)
+  case (130,131,132,133)
      ! upwinding, with 2 points on 1 side, and 3 points on the other side.
 
      if (N<5) then
-        print *,"Error! N must be at least 5 for option 130,131,132"
+        print *,"Error! N must be at least 5 for option 130,131,132,133"
         stop
      end if
      do i=1,N
@@ -1045,6 +1051,73 @@ subroutine uniformDiffMatrices(N, xMin, xMax, option, quadrature_option, x, weig
      ddx(2,(N-1):N)=0
      ddx(3,N)=0
 
+     ! Same first 2 rows and last 2 rows as scheme 12:
+     ddx(1,1)= -25/(12*dx)
+     ddx(1,2)= 4/(dx)
+     ddx(1,3)=-3/dx
+     ddx(1,4)=4/(3*dx)
+     ddx(1,5)=-1/(4*dx)
+     
+     ddx(2,1)= -1/(4*dx)
+     ddx(2,2)= -5/(6*dx)
+     ddx(2,3)=3/(2*dx)
+     ddx(2,4)=-1/(2*dx)
+     ddx(2,5)=1/(12*dx)
+     
+     ddx(N,N)= 25/(12*dx)
+     ddx(N,N-1)= -4/(dx)
+     ddx(N,N-2)=3/dx
+     ddx(N,N-3)=-4/(3*dx)
+     ddx(N,N-4)=1/(4*dx)
+        
+     ddx(N-1,N)= 1/(4*dx)
+     ddx(N-1,N-1)= 5/(6*dx)
+     ddx(N-1,N-2)=-3/(2*dx)
+     ddx(N-1,N-3)=1/(2*dx)
+     ddx(N-1,N-4)=-1/(12*dx)
+     
+     ! Unlike scheme 12, we also need to set row 3:
+     ddx(3,1)= 1/(12*dx)
+     ddx(3,2)=-2/(3*dx)
+     ddx(3,3)= 0
+     ddx(3,4)= 2/(3*dx)
+     ddx(3,5)=-1/(12*dx)
+     
+  case (123)
+     ddx(N,1:2)=0
+     ddx(N-1,1)=0
+     
+     ddx(1,(N-2):N)=0
+     ddx(2,(N-1):N)=0
+     ddx(3,N)=0
+
+     ! First row is all 0. There is no way to upwind.
+     ddx(1,:) = 0
+        
+     ddx(2,:) = 0
+     ddx(2,1) = -1/dx
+     ddx(2,2) =  1/dx
+        
+     ! Row 3 is like the interior of scheme 80:
+     ddx(3,:) = 0
+     ddx(3,4) =  1/(3*dx)
+     ddx(3,3) =  1/(2*dx)
+     ddx(3,2) = -1/(dx)
+     ddx(3,1) =  1/(6*dx)
+        
+     ! Copy the last 2 rows from scheme 12:
+     ddx(N,N)= 25/(12*dx)
+     ddx(N,N-1)= -4/(dx)
+     ddx(N,N-2)=3/dx
+     ddx(N,N-3)=-4/(3*dx)
+     ddx(N,N-4)=1/(4*dx)
+     
+     ddx(N-1,N)= 1/(4*dx)
+     ddx(N-1,N-1)= 5/(6*dx)
+     ddx(N-1,N-2)=-3/(2*dx)
+     ddx(N-1,N-3)=1/(2*dx)
+     ddx(N-1,N-4)=-1/(12*dx)
+
   case (132)
      ddx(1:2,N)=0
      ddx(1,N-1)=0
@@ -1052,6 +1125,73 @@ subroutine uniformDiffMatrices(N, xMin, xMax, option, quadrature_option, x, weig
      ddx((N-2):N,1)=0
      ddx((N-1):N,2)=0
      ddx(N,3)=0
+
+     ! Same first 2 rows and last 2 rows as scheme 12:
+     ddx(1,1)= -25/(12*dx)
+     ddx(1,2)= 4/(dx)
+     ddx(1,3)=-3/dx
+     ddx(1,4)=4/(3*dx)
+     ddx(1,5)=-1/(4*dx)
+     
+     ddx(2,1)= -1/(4*dx)
+     ddx(2,2)= -5/(6*dx)
+     ddx(2,3)=3/(2*dx)
+     ddx(2,4)=-1/(2*dx)
+     ddx(2,5)=1/(12*dx)
+     
+     ddx(N,N)= 25/(12*dx)
+     ddx(N,N-1)= -4/(dx)
+     ddx(N,N-2)=3/dx
+     ddx(N,N-3)=-4/(3*dx)
+     ddx(N,N-4)=1/(4*dx)
+        
+     ddx(N-1,N)= 1/(4*dx)
+     ddx(N-1,N-1)= 5/(6*dx)
+     ddx(N-1,N-2)=-3/(2*dx)
+     ddx(N-1,N-3)=1/(2*dx)
+     ddx(N-1,N-4)=-1/(12*dx)
+     
+     ! Unlike scheme 12, we also need to set row N-2:
+     ddx(N-2,N-4)= 1/(12*dx)
+     ddx(N-2,N-3)=-2/(3*dx)
+     ddx(N-2,N-2)= 0
+     ddx(N-2,N-1)= 2/(3*dx)
+     ddx(N-2,N-0)=-1/(12*dx)
+
+  case (133)
+     ddx(1:2,N)=0
+     ddx(1,N-1)=0
+            
+     ddx((N-2):N,1)=0
+     ddx((N-1):N,2)=0
+     ddx(N,3)=0
+
+     ! Copy the first 2 rows from scheme 12:
+     ddx(1,1)= -25/(12*dx)
+     ddx(1,2)= 4/(dx)
+     ddx(1,3)=-3/dx
+     ddx(1,4)=4/(3*dx)
+     ddx(1,5)=-1/(4*dx)
+        
+     ddx(2,1)= -1/(4*dx)
+     ddx(2,2)= -5/(6*dx)
+     ddx(2,3)=3/(2*dx)
+     ddx(2,4)=-1/(2*dx)
+     ddx(2,5)=1/(12*dx)
+        
+     ! Row N-2 is like the interior of scheme 90:
+     ddx(N-2,:) = 0
+     ddx(N-2,N-3) = -1/(3*dx)
+     ddx(N-2,N-2) = -1/(2*dx)
+     ddx(N-2,N-1) =  1/(dx)
+     ddx(N-2,N-0) = -1/(6*dx)
+
+     ddx(N-1,:) = 0
+     ddx(N-1,N-1) = -1/dx
+     ddx(N-1,N)   =  1/dx
+     
+     ! Last row is all 0. There is no way to upwind.
+     ddx(N,:) = 0
 
   case default
      print *,"Error! Invalid value for option in uniformDiffMatrices, location 2:", option

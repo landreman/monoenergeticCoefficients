@@ -42,6 +42,7 @@ module variables
   PetscScalar, dimension(:,:), allocatable, target :: pitch_angle_scattering_operator_preconditioner
 
   PetscScalar, dimension(:,:), allocatable :: B, dBdtheta, dBdzeta
+  PetscReal :: VPrime
 
   PetscScalar, parameter :: pi = 3.14159265358979d+0
   PetscScalar, parameter :: sqrtpi = 1.77245385090552d+0

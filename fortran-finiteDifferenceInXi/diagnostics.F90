@@ -22,7 +22,7 @@ subroutine diagnostics(solution)
   Vec :: solnOnProc0
   PetscViewer :: viewer
   PetscInt :: itheta, izeta, ixi, index
-  PetscReal :: flux, flow, VPrime
+  PetscReal :: flux, flow
   PetscScalar, pointer :: solnArray(:)
 
   if (masterProc) then
@@ -60,13 +60,6 @@ subroutine diagnostics(solution)
           
      call VecRestoreArrayF90(solnOnProc0, solnArray, ierr)
 
-     VPrime = 0
-     do itheta = 1,Ntheta
-        do izeta = 1,Nzeta
-           VPrime = VPrime + thetaWeights(itheta)*zetaWeights(izeta)/(B(itheta,izeta) ** 2)
-        end do
-     end do
-     
      flow = flow * 2 / (sqrtpi*G*VPrime)
      flux = -2 / (sqrtpi*G*G*VPrime)*flux
      

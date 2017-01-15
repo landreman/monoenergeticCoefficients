@@ -7,7 +7,8 @@
 
 subroutine computeB()
 
-  use variables, only: Ntheta, Nzeta, epsilon_t, epsilon_h, helicity_l, Nperiods, B, dBdtheta, dBdzeta, theta, zeta
+  use variables, only: Ntheta, Nzeta, epsilon_t, epsilon_h, helicity_l, Nperiods, B, dBdtheta, dBdzeta, theta, zeta, &
+       VPrime, thetaWeights, zetaWeights
 
   implicit none
   
@@ -28,4 +29,11 @@ subroutine computeB()
      end do
   end do
 
+  VPrime = 0
+  do itheta = 1,Ntheta
+     do izeta = 1,Nzeta
+        VPrime = VPrime + thetaWeights(itheta)*zetaWeights(izeta)/(B(itheta,izeta) ** 2)
+     end do
+  end do
+     
 end subroutine computeB

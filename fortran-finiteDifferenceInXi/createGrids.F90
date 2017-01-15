@@ -900,14 +900,14 @@ subroutine createGrids()
   call computeB()
 
 
-  print *,"Here comes ddxi_plus:"
-  do j=1,Nxi
-     print *,ddxi_plus(j,:)
-  end do
-  print *,"Here comes ddxi_minus:"
-  do j=1,Nxi
-     print *,ddxi_minus(j,:)
-  end do
+!!$  print *,"Here comes ddxi_plus:"
+!!$  do j=1,Nxi
+!!$     print *,ddxi_plus(j,:)
+!!$  end do
+!!$  print *,"Here comes ddxi_minus:"
+!!$  do j=1,Nxi
+!!$     print *,ddxi_minus(j,:)
+!!$  end do
 
 end subroutine createGrids
 

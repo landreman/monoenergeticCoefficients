@@ -32,9 +32,11 @@ subroutine populateMatrix(matrix, whichMatrix)
   PetscInt :: itheta, ithetaRow, ithetaCol
   PetscInt :: izeta, izetaRow, izetaCol
   PetscInt :: ixi, ixiRow, ixiCol
-  PetscInt :: rowIndex, colIndex
+  PetscInt :: rowIndex, colIndex, irow, j
   PetscScalar, dimension(:,:), pointer :: derivative_matrix_to_use, pitch_angle_scattering_operator_to_use
   PetscScalar :: temp
+  PetscInt, allocatable, dimension(:) :: row_indices, col_indices
+  PetscScalar, allocatable, dimension(:,:) :: values
 
   if (masterProc) then
      print *,"Entering populateMatrix for whichMatrix = ",whichMatrix
@@ -138,6 +140,33 @@ subroutine populateMatrix(matrix, whichMatrix)
      end do
   end do
   
+  ! Add source term
+  if (constraint_option==1 .and. masterProc) then
+     do irow = 1,matrixSize-1
+        call MatSetValue(matrix,irow-1,matrixSize-1,one,ADD_VALUES,ierr) ! -1 because PETSc uses 0-based indices.
+     end do
+  end if
+
+
+  ! Add constraint row
+  if (constraint_option==1 .and. masterProc) then
+     allocate(row_indices(1))
+     allocate(col_indices(matrixSize-1))
+     allocate(values(matrixSize-1,1))
+     row_indices = matrixSize - 1  ! -1 because PETSc uses 0-based indexing
+     col_indices = [(j, j = 0,matrixSize-2 )]
+     do izeta = 1,Nzeta
+        do itheta = 1,Ntheta
+           do ixi = 1,Nxi
+              values(getIndex(itheta,izeta,ixi),1) = (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta))
+           end do
+        end do
+     end do
+     call MatSetValues(matrix, 1, row_indices, matrixSize-1, col_indices, values, ADD_VALUES, ierr)
+     deallocate(row_indices, col_indices, values)
+  end if
+
+  ! Done with adding matrix elements.
   call MatAssemblyBegin(matrix, MAT_FINAL_ASSEMBLY, ierr)
   call MatAssemblyEnd(matrix, MAT_FINAL_ASSEMBLY, ierr)
 

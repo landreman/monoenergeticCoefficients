@@ -7,13 +7,15 @@
 
 subroutine setup_multigrid()
 
+  use petscmat
   use variables
 
   implicit none
 
-  integer :: j, k
+  integer :: j, k, level, itheta, izeta
   PC :: preconditioner_context
   Vec :: temp_vec
+  PetscErrorCode :: ierr
 
   call set_grid_resolutions()
 

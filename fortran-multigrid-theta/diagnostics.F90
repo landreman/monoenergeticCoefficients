@@ -22,10 +22,10 @@ subroutine diagnostics(solution)
   Vec :: solnOnProc0
   PetscViewer :: viewer
   PetscInt :: itheta, izeta, ixi, index
-  PetscReal :: flux, flow, VPrime
+  PetscReal :: flux, flow
   PetscScalar, pointer :: solnArray(:)
   PetscScalar, dimension(:), pointer :: xi, thetaWeights, zetaWeights, xiWeights
-  PetscScalar, dimension(:), pointer :: B, dBdtheta, dBdzeta
+  PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
 
   if (masterProc) then
      print *,"Entering diagnostics"

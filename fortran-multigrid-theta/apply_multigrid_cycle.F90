@@ -7,14 +7,15 @@
 
 subroutine apply_multigrid_cycle(preconditioner_context, input_vec, output_vec, ierr)
 
-  use variables, only: levels, masterProc, N_levels, N_smoothing
+  use variables, only: levels, masterProc, N_levels, N_smoothing, one, ksp_on_coarsest_level, &
+       multigrid_restriction_matrices, multigrid_prolongation_matrices
 
   implicit none
 
   PC :: preconditioner_context
   Vec :: input_vec, output_vec
   PetscErrorCode :: ierr
-  integer :: level, reason
+  integer :: level, reason, j_smoothing
 
   if (masterProc) print *,"Beginning apply_multigrid_cycle"
 

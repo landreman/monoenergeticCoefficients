@@ -7,6 +7,8 @@
 
 subroutine restriction_prolongation_matrices(fine_level)
 
+  use petscmat
+  use indices
   use variables, only: levels, multigrid_restriction_matrices, multigrid_prolongation_matrices, numProcs, one, constraint_option, &
        restriction_option, pi, zetaMax
 
@@ -60,27 +62,27 @@ subroutine restriction_prolongation_matrices(fine_level)
   ! Transfer the source/constraint element at the end by itself:
   if (constraint_option==1) then
      call MatSetValue(multigrid_prolongation_matrices(fine_level), levels(fine_level)%matrixSize, levels(coarse_level)%matrixSize, &
-          one, ADD_VALUE, ierr)
+          one, ADD_VALUES, ierr)
   end if
 
   ! Now populate the 3D prolongation matrix.
   ! Parallelize the looping over rows (fine grid) but not the looping over columns (coarse grid)
-  do itheta_coarse = 1:Ntheta_coarse
-     10 do itheta_fine = levels(fine_level)%ithetaMin : levels(fine_level)%ithetaMax
+  do itheta_coarse = 1,Ntheta_coarse
+     do itheta_fine = levels(fine_level)%ithetaMin, levels(fine_level)%ithetaMax
         theta_value = theta_prolongation(itheta_fine, itheta_coarse)
-        if (abs(theta_value)<1e-12) continue 10
-        do izeta_coarse = 1:Nzeta_coarse
-           20 do izeta_fine = levels(fine_level)%izetaMin : levels(fine_level)%izetaMax
+        if (abs(theta_value)<1e-12) cycle
+        do izeta_coarse = 1,Nzeta_coarse
+           do izeta_fine = levels(fine_level)%izetaMin, levels(fine_level)%izetaMax
               zeta_value = zeta_prolongation(izeta_fine, izeta_coarse)
-              if (abs(zeta_value)<1e-12) continue 20
-              do ixi_coarse = 1:Nxi_coarse
-                 do ixi_fine = 1:Nxi_fine
+              if (abs(zeta_value)<1e-12) cycle
+              do ixi_coarse = 1,Nxi_coarse
+                 do ixi_fine = 1,Nxi_fine
                     xi_value = xi_prolongation(ixi_fine, ixi_coarse)
                     if (abs(xi_value)>1e-12) then
                        call MatSetValue(multigrid_prolongation_matrices(fine_level), &
                             getIndex(fine_level, itheta_fine, izeta_fine, ixi_fine), &
                             getIndex(coarse_level, itheta_coarse, izeta_coarse, ixi_coarse), &
-                            theta_value*zeta_value*xi_value, ADD_VALUE, ierr)
+                            theta_value*zeta_value*xi_value, ADD_VALUES, ierr)
                     end if
                  end do
               end do

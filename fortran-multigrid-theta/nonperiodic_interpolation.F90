@@ -39,7 +39,7 @@ subroutine nonperiodic_interpolation(N, M, x, y, matrix)
   end if
 
   ! Test to make sure the x grid points are sorted in increasing order: 
-  interval = x(2)-x(1)
+!!$  interval = x(2)-x(1)
   do j=2,N
      if (x(j-1) >= x(j)) then 
         print *,"Error! x grid points are not sorted in increasing order."
@@ -101,7 +101,7 @@ subroutine nonperiodic_interpolation(N, M, x, y, matrix)
 
   ! Sanity test, which can be commented out for speed: row sums should all be 1.
   do j=1,M
-     if (abs(sum(matrix,2)-1) > 1d-12) then
+     if (abs(sum(matrix(j,:))-1) > 1d-12) then
         print *,"Error in periodic_interpolation! Row sums are not 1"
         print *,"Here comes interpolation matrix:"
         do k=1,M

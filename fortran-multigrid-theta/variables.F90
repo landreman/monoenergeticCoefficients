@@ -17,7 +17,7 @@ module variables
   PetscOffset :: offset
   PetscInt :: myRank, numProcs
   logical :: masterProc
-  PetscScalar :: zetaMax
+  PetscScalar :: zetaMax, VPrime
 
   PetscScalar, parameter :: pi = 3.14159265358979d+0
   PetscScalar, parameter :: sqrtpi = 1.77245385090552d+0
@@ -66,7 +66,7 @@ module variables
      PetscInt :: izetaMin, izetaMax, localNzeta
 
      Mat :: low_order_matrix
-     Vec :: residual_vec, solution_vec, temp_vec, smoother_shift
+     Vec :: residual_vec, solution_vec, temp_vec, smoother_shift, rhs_vec
 
      Mat :: Jacobi_iteration_matrix
      Vec :: omega_times_inverse_diagonal
@@ -75,7 +75,7 @@ module variables
 
   type (multigrid_level), allocatable, dimension(:), target :: levels
 
-  Mat, allocatable, dimension(:) :: multigrid_interpolation_matrices, multigrid_restriction_matrices
+  Mat, allocatable, dimension(:) :: multigrid_prolongation_matrices, multigrid_restriction_matrices
 
   PetscScalar :: Jacobi_omega = (2.0d+0)/(3.0d+0)
   KSP :: ksp_on_coarsest_level

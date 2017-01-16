@@ -10,7 +10,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   use petscmat
 
   use indices
-  use variables: Ntheta_fine => Ntheta, Nzeta_fine => Nzeta, Nxi_fine => Nxi
+  use variables, Ntheta_fine => Ntheta, Nzeta_fine => Nzeta, Nxi_fine => Nxi, matrixSize_fine => matrixSize
   use sparsify
 
   implicit none
@@ -42,7 +42,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   integer :: Ntheta, Nzeta, Nxi, matrixSize
   integer :: ithetaMin, ithetaMax, izetaMin, izetaMax
   PetscScalar, dimension(:), pointer :: xi, thetaWeights, zetaWeights, xiWeights
-  PetscScalar, dimension(:), pointer :: B, dBdtheta, dBdzeta
+  PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
   
   ! Values for whichMatrix:
   ! 0 = low-order preconditioner matrix, used only on the coarsest grid.
@@ -91,9 +91,9 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      end if
      do ithetaRow = ithetaMin,ithetaMax
         do izeta = izetaMin,izetaMax
-           rowIndex = getIndex(ithetaRow, izeta, ixi)
+           rowIndex = getIndex(level,ithetaRow, izeta, ixi)
            do ithetaCol = 1,Ntheta
-              colIndex = getIndex(ithetaCol, izeta, ixi)
+              colIndex = getIndex(level,ithetaCol, izeta, ixi)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
                    iota*B(ithetaRow,izeta)*xi(ixi)*derivative_matrix_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
            end do
@@ -121,9 +121,9 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      end if
      do izetaRow = izetaMin,izetaMax
         do itheta = ithetaMin,ithetaMax
-           rowIndex = getIndex(itheta, izetaRow, ixi)
+           rowIndex = getIndex(level,itheta, izetaRow, ixi)
            do izetaCol = 1,Nzeta
-              colIndex = getIndex(itheta, izetaCol, ixi)
+              colIndex = getIndex(level,itheta, izetaCol, ixi)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
                    B(itheta,izetaRow)*xi(ixi)*derivative_matrix_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
            end do
@@ -143,7 +143,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   do itheta = ithetaMin,ithetaMax
      do izeta = izetaMin,izetaMax
         do ixiRow = 1,Nxi
-           rowIndex = getIndex(itheta,izeta,ixiRow)
+           rowIndex = getIndex(level,itheta,izeta,ixiRow)
            temp = -(0.5d+0)*(1-xi(ixiRow)*xi(ixiRow))*(dBdtheta(itheta,izeta)*iota + dBdzeta(itheta,izeta))
            if (temp>0) then
               if (whichMatrix == 1) then
@@ -159,7 +159,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
               end if
            end if
            do ixiCol = 1,Nxi
-              colIndex = getIndex(itheta,izeta,ixiCol)
+              colIndex = getIndex(level,itheta,izeta,ixiCol)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
                    temp * derivative_matrix_to_use(ixiRow,ixiCol) &  ! Mirror term
                    - nu * pitch_angle_scattering_operator_to_use(ixiRow,ixiCol), &    ! Collision operator
@@ -186,7 +186,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      do izeta = 1,Nzeta
         do itheta = 1,Ntheta
            do ixi = 1,Nxi
-              values(getIndex(itheta,izeta,ixi),1) = (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta))
+              values(getIndex(level,itheta,izeta,ixi),1) = (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta))
            end do
         end do
      end do

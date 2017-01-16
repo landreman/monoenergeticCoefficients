@@ -5,7 +5,7 @@
 #include <petsc/finclude/petscdmdadef.h>
 #endif
 
-subroutine createGrids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, thetaWeights, zetaWeights, xiWeights, &
+subroutine create_grids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, thetaWeights, zetaWeights, xiWeights, &
      ithetaMin, ithetaMax, localNtheta, izetaMin, izetaMax, localNzeta, &
      ddtheta_plus, ddtheta_minus, ddtheta_plus_preconditioner, ddtheta_minus_preconditioner, &
      ddzeta_plus, ddzeta_minus, ddzeta_plus_preconditioner, ddzeta_minus_preconditioner, &
@@ -902,6 +902,6 @@ subroutine createGrids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, t
 !!$     print *,ddxi_minus(j,:)
 !!$  end do
 
-end subroutine createGrids
+  end subroutine create_grids
 
 

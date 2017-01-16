@@ -22,7 +22,7 @@ subroutine populateRHS(vec)
   PetscViewer :: viewer
 
   PetscScalar, dimension(:), pointer :: xi
-  PetscScalar, dimension(:), pointer :: B, dBdtheta, dBdzeta
+  PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
 
   if (masterProc) print *,"Entering populateRHS"
 

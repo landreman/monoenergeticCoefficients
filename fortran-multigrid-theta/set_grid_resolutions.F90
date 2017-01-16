@@ -94,9 +94,9 @@ subroutine set_grid_resolutions()
 
   if (masterProc) then
      print *,"----- Computed parameters for multigrid: ----"
-     print *,"Level","Ntheta","Nzeta","Nxi"
+     print *," Level Ntheta  Nzeta    Nxi"
      do j=1,N_levels
-        print *,j,levels(j)%Ntheta,levels(j)%Nzeta,levels(j)%Nxi
+        print "(i7,i7,i7,i7)",j,levels(j)%Ntheta,levels(j)%Nzeta,levels(j)%Nxi
      end do
   end if
 

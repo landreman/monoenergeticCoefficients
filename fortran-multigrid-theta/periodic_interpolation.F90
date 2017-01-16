@@ -103,7 +103,7 @@ subroutine periodic_interpolation(N, M, period, y, matrix)
 
   ! Sanity test, which can be commented out for speed: row sums should all be 1.
   do j=1,M
-     if (abs(sum(matrix,2)-1) > 1d-12) then
+     if (abs(sum(matrix(j,:))-1) > 1d-12) then
         print *,"Error in periodic_interpolation! Row sums are not 1"
         print *,"Here comes interpolation matrix:"
         do k=1,M

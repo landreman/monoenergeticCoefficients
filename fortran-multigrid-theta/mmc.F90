@@ -33,7 +33,7 @@ program mmc
 #endif
 
   !external populateMatrix, populateRHS
-  external apply_multigrid_preconditioner
+  external apply_multigrid_cycle
 
   call PETSCInitialize(PETSC_NULL_CHARACTER, ierr)
   call MPI_COMM_SIZE(PETSC_COMM_WORLD, numProcs, ierr)
@@ -152,7 +152,7 @@ program mmc
 
   ! We need the high-order 'real' matrix on the finest level:
   call preallocateMatrix(high_order_matrix_on_finest_level,1,1)
-  call populateMatrix(high_orer_matrix_on_finest_level,1,1)
+  call populateMatrix(high_order_matrix_on_finest_level,1,1)
   ! In the next line, the 3rd argument (the Mat object for the KSP preconditioner)
   ! is not used for anything because we set a custom preconditioner.
   call KSPSetOperators(ksp, high_order_matrix_on_finest_level, high_order_matrix_on_finest_level, ierr)

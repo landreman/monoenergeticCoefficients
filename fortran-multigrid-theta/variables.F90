@@ -1,0 +1,83 @@
+#include "PETScVersions.F90"
+#if (PETSC_VERSION_MAJOR < 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR < 6))
+#include <finclude/petsckspdef.h>
+#else
+#include <petsc/finclude/petsckspdef.h>
+#endif
+
+module variables
+
+  implicit none
+
+!!#include <finclude/petscsys.h>
+!#include <finclude/petscsysdef.h>
+
+  PetscInt :: Ntheta, Nzeta, Nxi, Nperiods, helicity_l, matrixSize
+  PetscReal :: nu, epsilon_t, epsilon_h, iota, G, I
+  PetscOffset :: offset
+  PetscInt :: myRank, numProcs
+  logical :: masterProc
+  PetscScalar :: zetaMax
+
+  PetscScalar, parameter :: pi = 3.14159265358979d+0
+  PetscScalar, parameter :: sqrtpi = 1.77245385090552d+0
+  PetscScalar, parameter :: zero = 0.0d+0, one = 1.0d+0, two = 2.0d+0
+
+  PetscInt :: theta_derivative_option, preconditioner_theta_derivative_option
+  PetscInt :: zeta_derivative_option, preconditioner_zeta_derivative_option
+  PetscInt :: xi_derivative_option, preconditioner_xi_derivative_option
+  PetscInt :: pitch_angle_scattering_option, preconditioner_pitch_angle_scattering_option
+  PetscInt :: xi_quadrature_option, constraint_option
+
+  PetscBool :: refine_theta, refine_zeta, refine_xi
+  PetscInt :: N_levels
+  PetscInt, allocatable, dimension(:) :: Ntheta_levels, Nzeta_levels, Nxi_levels
+  PetscInt :: Ntheta_min, Nzeta_min, Nxi_min
+
+  PetscInt :: smoothing_option, restriction_option, N_smoothing=1
+
+  type :: multigrid_level
+     PetscInt :: Ntheta, Nzeta, Nxi, matrixSize
+
+     PetscScalar, allocatable, dimension(:) :: theta, zeta, xi
+     PetscScalar, dimension(:), allocatable :: thetaWeights, zetaWeights, xiWeights
+
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_plus
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_minus
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_plus_preconditioner
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_minus_preconditioner
+     
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_plus
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_minus
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_plus_preconditioner
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_minus_preconditioner
+
+     PetscScalar, dimension(:,:), allocatable :: ddxi_plus
+     PetscScalar, dimension(:,:), allocatable :: ddxi_minus
+     PetscScalar, dimension(:,:), allocatable :: ddxi_plus_preconditioner
+     PetscScalar, dimension(:,:), allocatable :: ddxi_minus_preconditioner
+
+     PetscScalar, dimension(:,:), allocatable :: pitch_angle_scattering_operator
+     PetscScalar, dimension(:,:), allocatable :: pitch_angle_scattering_operator_preconditioner
+
+     PetscScalar, dimension(:,:), allocatable :: B, dBdtheta, dBdzeta
+
+     PetscInt :: ithetaMin, ithetaMax, localNtheta
+     PetscInt :: izetaMin, izetaMax, localNzeta
+
+     Mat :: low_order_matrix
+     Vec :: residual_vec, solution_vec, temp_vec, smoother_shift
+
+     Mat :: Jacobi_iteration_matrix
+     Vec :: omega_times_inverse_diagonal
+
+  end type multigrid_level
+
+  type (multigrid_level), allocatable, dimension(:), target :: levels
+
+  Mat, allocatable, dimension(:) :: multigrid_interpolation_matrices, multigrid_restriction_matrices
+
+  PetscScalar :: Jacobi_omega = (2.0d+0)/(3.0d+0)
+  KSP :: ksp_on_coarsest_level
+
+end module variables

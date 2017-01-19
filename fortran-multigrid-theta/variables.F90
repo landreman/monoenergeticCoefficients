@@ -62,8 +62,8 @@ module variables
 
      PetscScalar, dimension(:,:), allocatable :: B, dBdtheta, dBdzeta
 
-     PetscInt :: ithetaMin, ithetaMax, localNtheta
-     PetscInt :: izetaMin, izetaMax, localNzeta
+     PetscInt :: ithetaMin, ithetaMax
+     PetscInt :: izetaMin, izetaMax
 
      Mat :: low_order_matrix
      Vec :: residual_vec, solution_vec, temp_vec, smoother_shift, rhs_vec

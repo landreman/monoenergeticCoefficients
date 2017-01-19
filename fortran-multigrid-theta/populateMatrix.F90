@@ -50,7 +50,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   ! 4 = Like the low-order preconditioner matrix, except the sources and constraints are not included, and there is a 1 on the corresponding diagonal
 
   if (masterProc) then
-     print *,"Entering populateMatrix for whichMatrix = ",whichMatrix
+     print "(a,i4,a,i4)"," Entering populateMatrix for level ",level,", whichMatrix = ",whichMatrix
   end if
 
   ! For convenience, use some short variable names to refer to quantities on this level:
@@ -69,7 +69,6 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   B => levels(level)%B
   dBdtheta => levels(level)%dBdtheta
   dBdzeta => levels(level)%dBdzeta
-
 
   ! Add d/dtheta parallel streaming term
   itheta = -1

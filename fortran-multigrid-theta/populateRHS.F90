@@ -17,7 +17,7 @@ subroutine populateRHS(vec)
   Vec :: vec
   PetscErrorCode :: ierr
 
-  PetscInt :: itheta, izeta, ixi, index
+  PetscInt :: itheta, izeta, ixi, index, vec_size
   PetscReal :: valueToInsert
   PetscViewer :: viewer
 
@@ -33,6 +33,7 @@ subroutine populateRHS(vec)
   dBdzeta => levels(1)%dBdzeta
 
   call VecSet(vec, 0.0d+0, ierr)
+  call VecGetSize(vec, vec_size, ierr)
 
   if (masterProc) then
      ! For simplicity, do everything on proc 1.

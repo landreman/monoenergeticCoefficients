@@ -12,7 +12,7 @@ subroutine setup_multigrid()
 
   implicit none
 
-  integer :: j, k, level, itheta, izeta
+  integer :: j, k, level
   PC :: preconditioner_context
   Vec :: temp_vec
   PetscErrorCode :: ierr
@@ -20,30 +20,13 @@ subroutine setup_multigrid()
   call set_grid_resolutions()
 
   do j = 1,N_levels
-     call create_grids(j, levels(j)%Ntheta, levels(j)%Nzeta, levels(j)%Nxi, levels(j)%matrixSize, levels(j)%theta, levels(j)%zeta, levels(j)%xi, &
-          levels(j)%thetaWeights, levels(j)%zetaWeights, levels(j)%xiWeights, levels(j)%ithetaMin, levels(j)%ithetaMax, levels(j)%localNtheta, &
-          levels(j)%izetaMin, levels(j)%izetaMax, levels(j)%localNzeta, &
-          levels(j)%ddtheta_plus, levels(j)%ddtheta_minus, levels(j)%ddtheta_plus_preconditioner, levels(j)%ddtheta_minus_preconditioner, &
-          levels(j)%ddzeta_plus, levels(j)%ddzeta_minus, levels(j)%ddzeta_plus_preconditioner, levels(j)%ddzeta_minus_preconditioner, &
-          levels(j)%ddxi_plus, levels(j)%ddxi_minus, levels(j)%ddxi_plus_preconditioner, levels(j)%ddxi_minus_preconditioner, &
-          levels(j)%pitch_angle_scattering_operator, levels(j)%pitch_angle_scattering_operator_preconditioner)
+     call create_grids(j)
+  end do
 
-     
-     ! Compute B and its derivatives     
-     allocate(levels(j)%B(levels(j)%Ntheta,levels(j)%Nzeta))
-     allocate(levels(j)%dBdtheta(levels(j)%Ntheta,levels(j)%Nzeta))
-     allocate(levels(j)%dBdzeta(levels(j)%Ntheta,levels(j)%Nzeta))
-     call computeB(levels(j)%Ntheta, levels(j)%theta, levels(j)%Nzeta, levels(j)%zeta, levels(j)%B, levels(j)%dBdtheta, levels(j)%dBdzeta)
+  call computeB()
 
-     if (j==1) then
-        VPrime = 0
-        do itheta = 1,Ntheta
-           do izeta = 1,Nzeta
-              VPrime = VPrime + levels(1)%thetaWeights(itheta) * levels(1)%zetaWeights(izeta) / (levels(1)%B(itheta,izeta) ** 2)
-           end do
-        end do
-     end if
-
+  do j = 1,N_levels
+    
      ! Build the low-order matrix at this level:
      call preallocateMatrix(levels(j)%low_order_matrix,0,j)
      call populateMatrix(levels(j)%low_order_matrix,0,j)
@@ -52,18 +35,18 @@ subroutine setup_multigrid()
      call MatCreateVecs(levels(j)%low_order_matrix, PETSC_NULL_OBJECT, levels(j)%residual_vec, ierr)
      call VecDuplicate(levels(j)%residual_vec, levels(j)%solution_vec, ierr)
      call VecDuplicate(levels(j)%residual_vec, levels(j)%temp_vec, ierr)
+     call VecDuplicate(levels(j)%residual_vec, levels(j)%rhs_vec, ierr)
      call VecDuplicate(levels(j)%residual_vec, levels(j)%smoother_shift, ierr)
   end do
 
-!!$  allocate(multigrid_interpolation_matrices(N_levels-1))
-!!$  allocate(multigrid_restriction_matrices(N_levels-1))
-!!$
-!!$  do j=1,N_levels-1
-!!$     call interpolation_restriction(multigrid_interpolation_matrices(j), multigrid_restriction_matrices(j), &
-!!$          levels(j)%Ntheta, levels(j+1)%Ntheta, levels(j)%theta, levels(j+1)%theta, &
-!!$          levels(j)%Nzeta, levels(j+1)%Nzeta, levels(j)%zeta, levels(j+1)%zeta, &
-!!$          levels(j)%Nxi, levels(j+1)%Nxi, levels(j)%xi, levels(j+1)%xi)
-!!$  end do
+  matrixSize = levels(1)%matrixSize
+
+  allocate(multigrid_prolongation_matrices(N_levels-1))
+  allocate(multigrid_restriction_matrices(N_levels-1))
+
+  do j=1,N_levels-1
+     call restriction_prolongation_matrices(j)
+  end do
 
   ! *****************************************************
   ! Build matrices and vectors needed for smoothing

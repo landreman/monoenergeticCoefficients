@@ -65,7 +65,7 @@ program mmc
   preconditioner_pitch_angle_scattering_option = 2
 
   xi_quadrature_option = 3
-  constraint_option = 2
+  constraint_option = 1
 
   refine_theta = PETSC_FALSE
   refine_zeta = PETSC_TRUE
@@ -172,7 +172,8 @@ program mmc
   call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
 #endif
   call KSPSetFromOptions(ksp,ierr)
-
+  
+  !call VecView(rhs, PETSC_VIEWER_STDOUT_WORLD, ierr)
   if (masterProc) then
      print *,"Beginning solve..."
   end if

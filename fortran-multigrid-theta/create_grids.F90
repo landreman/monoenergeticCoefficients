@@ -5,52 +5,57 @@
 #include <petsc/finclude/petscdmdadef.h>
 #endif
 
-subroutine create_grids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, thetaWeights, zetaWeights, xiWeights, &
-     ithetaMin, ithetaMax, localNtheta, izetaMin, izetaMax, localNzeta, &
-     ddtheta_plus, ddtheta_minus, ddtheta_plus_preconditioner, ddtheta_minus_preconditioner, &
-     ddzeta_plus, ddzeta_minus, ddzeta_plus_preconditioner, ddzeta_minus_preconditioner, &
-     ddxi_plus, ddxi_minus, ddxi_plus_preconditioner, ddxi_minus_preconditioner, &
-     pitch_angle_scattering_operator, pitch_angle_scattering_operator_preconditioner)
-
-  use petscdmda
-  use variables, only: constraint_option, masterProc, xi_quadrature_option, &
-       theta_derivative_option, preconditioner_theta_derivative_option, &
-       zeta_derivative_option, preconditioner_zeta_derivative_option, &
-       xi_derivative_option, preconditioner_xi_derivative_option, &
-       pitch_angle_scattering_option, preconditioner_pitch_angle_scattering_option, &
-       myrank, NPeriods, numProcs, zero, one, two, pi, zetaMax
-
-  implicit none
-
-  integer, intent(in) :: level, Ntheta, Nzeta, Nxi
-  integer, intent(out) :: matrixSize, ithetaMin, ithetaMax, localNtheta, izetaMin, izetaMax, localNzeta
-  PetscScalar, allocatable, dimension(:) :: theta, zeta, xi, thetaWeights, zetaWeights, xiWeights
-  PetscScalar, allocatable, dimension(:,:) :: ddtheta_plus, ddtheta_minus, ddtheta_plus_preconditioner, ddtheta_minus_preconditioner
-  PetscScalar, allocatable, dimension(:,:) :: ddzeta_plus, ddzeta_minus, ddzeta_plus_preconditioner, ddzeta_minus_preconditioner
-  PetscScalar, allocatable, dimension(:,:) :: ddxi_plus, ddxi_minus, ddxi_plus_preconditioner, ddxi_minus_preconditioner
-  PetscScalar, allocatable, dimension(:,:) :: pitch_angle_scattering_operator, pitch_angle_scattering_operator_preconditioner
-
-  PetscScalar, dimension(:), allocatable :: theta_preconditioner, thetaWeights_preconditioner
-  PetscScalar, dimension(:), allocatable :: zeta_preconditioner, zetaWeights_preconditioner
-  PetscScalar, dimension(:,:), allocatable :: d2dtheta2
-  PetscScalar, dimension(:,:), allocatable :: d2dzeta2
-  PetscScalar, dimension(:,:), allocatable :: d2dxi2, ddxi
-  PetscInt :: scheme, ixi, quadrature_option, derivative_option_plus, derivative_option_minus, derivative_option
-  PetscInt :: j, k
-  DM :: myDM
-  integer, parameter :: bufferLength = 200
-  character(len=bufferLength) :: procAssignments
-  integer :: tag, dummy(1)
-  integer :: status(MPI_STATUS_SIZE)
-  logical :: call_uniform_diff_matrices
-  PetscErrorCode :: ierr
+  subroutine create_grids(level)
+    use petscdmda
+       
+    use variables, Ntheta_fine => Ntheta, Nzeta_fine => Nzeta, Nxi_fine => Nxi, matrixSize_fine => matrixSize
 
 
-  if (masterProc) print *,"---- Initializing grids for multigrid level",level,"----"
-  matrixSize = Ntheta*Nzeta*Nxi
-  if (constraint_option==1) matrixSize = matrixSize + 1
-  if (masterProc) print *,"matrixSize:",matrixSize
+    implicit none
 
+    integer, intent(in) :: level
+
+    PetscScalar, dimension(:), allocatable :: theta_preconditioner, thetaWeights_preconditioner
+    PetscScalar, dimension(:), allocatable :: zeta_preconditioner, zetaWeights_preconditioner
+    PetscScalar, dimension(:,:), allocatable :: d2dtheta2
+    PetscScalar, dimension(:,:), allocatable :: d2dzeta2
+    PetscScalar, dimension(:,:), allocatable :: d2dxi2, ddxi
+    PetscInt :: scheme, ixi, quadrature_option, derivative_option_plus, derivative_option_minus, derivative_option
+    PetscInt :: j, k, itheta, izeta
+    PetscInt :: localNtheta, localNzeta
+    DM :: myDM
+    integer, parameter :: bufferLength = 200
+    character(len=bufferLength) :: procAssignments
+    integer :: tag, dummy(1)
+    integer :: status(MPI_STATUS_SIZE)
+    logical :: call_uniform_diff_matrices
+    PetscErrorCode :: ierr
+    
+    ! For convenience, use some short variable names to refer to quantities on this level:
+    integer, pointer :: Ntheta, Nzeta, Nxi, matrixSize
+    integer, pointer :: ithetaMin, ithetaMax, izetaMin, izetaMax
+    PetscScalar, dimension(:), pointer :: theta, zeta, xi, thetaWeights, zetaWeights, xiWeights
+    PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
+    PetscScalar, dimension(:,:), pointer :: ddtheta_plus, ddtheta_minus, ddtheta_plus_preconditioner, ddtheta_minus_preconditioner
+    PetscScalar, dimension(:,:), pointer :: ddzeta_plus, ddzeta_minus, ddzeta_plus_preconditioner, ddzeta_minus_preconditioner
+    PetscScalar, dimension(:,:), pointer :: ddxi_plus, ddxi_minus, ddxi_plus_preconditioner, ddxi_minus_preconditioner
+    PetscScalar, dimension(:,:), pointer :: pitch_angle_scattering_operator, pitch_angle_scattering_operator_preconditioner
+    
+    ! For convenience, use some short variable names to refer to quantities on this level:
+    Ntheta => levels(level)%Ntheta
+    Nzeta  => levels(level)%Nzeta
+    Nxi    => levels(level)%Nxi
+    matrixSize => levels(level)%matrixSize
+    ithetaMin => levels(level)%ithetaMin
+    ithetaMax => levels(level)%ithetaMax
+    izetaMin  => levels(level)%izetaMin
+    izetaMax  => levels(level)%izetaMax
+    
+    if (masterProc) print "(a,i3,a)"," ---- Initializing grids for multigrid level",level,"----"
+    matrixSize = Ntheta*Nzeta*Nxi
+    if (constraint_option==1) matrixSize = matrixSize + 1
+    if (masterProc) print *,"matrixSize:",matrixSize
+    
     ! *******************************************************************************
     ! *******************************************************************************
     !
@@ -152,13 +157,21 @@ subroutine create_grids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, 
     ! *******************************************************************************
     ! *******************************************************************************
 
-    allocate(theta(Ntheta))
-    allocate(thetaWeights(Ntheta))
-    allocate(ddtheta_plus(Ntheta,Ntheta))
-    allocate(ddtheta_minus(Ntheta,Ntheta))
-    allocate(ddtheta_plus_preconditioner(Ntheta,Ntheta))
-    allocate(ddtheta_minus_preconditioner(Ntheta,Ntheta))
+    allocate(levels(level)%theta(Ntheta))
+    allocate(levels(level)%thetaWeights(Ntheta))
+    allocate(levels(level)%ddtheta_plus(Ntheta,Ntheta))
+    allocate(levels(level)%ddtheta_minus(Ntheta,Ntheta))
+    allocate(levels(level)%ddtheta_plus_preconditioner(Ntheta,Ntheta))
+    allocate(levels(level)%ddtheta_minus_preconditioner(Ntheta,Ntheta))
     allocate(d2dtheta2(Ntheta,Ntheta))
+
+    theta => levels(level)%theta
+    thetaWeights => levels(level)%thetaWeights
+
+    ddtheta_plus => levels(level)%ddtheta_plus
+    ddtheta_minus => levels(level)%ddtheta_minus
+    ddtheta_plus_preconditioner => levels(level)%ddtheta_plus_preconditioner
+    ddtheta_minus_preconditioner => levels(level)%ddtheta_minus_preconditioner
 
     ! *******************************************************************************
     ! Handle d/dtheta for the ExB & magnetic drift terms in the main matrix.
@@ -363,13 +376,21 @@ subroutine create_grids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, 
 
     zetaMax = 2*pi/NPeriods
 
-    allocate(zeta(Nzeta))
-    allocate(zetaWeights(Nzeta))
-    allocate(ddzeta_plus(Nzeta,Nzeta))
-    allocate(ddzeta_minus(Nzeta,Nzeta))
-    allocate(ddzeta_plus_preconditioner(Nzeta,Nzeta))
-    allocate(ddzeta_minus_preconditioner(Nzeta,Nzeta))
+    allocate(levels(level)%zeta(Nzeta))
+    allocate(levels(level)%zetaWeights(Nzeta))
+    allocate(levels(level)%ddzeta_plus(Nzeta,Nzeta))
+    allocate(levels(level)%ddzeta_minus(Nzeta,Nzeta))
+    allocate(levels(level)%ddzeta_plus_preconditioner(Nzeta,Nzeta))
+    allocate(levels(level)%ddzeta_minus_preconditioner(Nzeta,Nzeta))
     allocate(d2dzeta2(Nzeta,Nzeta))
+
+    zeta => levels(level)%zeta
+    zetaWeights  => levels(level)%zetaWeights
+
+    ddzeta_plus => levels(level)%ddzeta_plus
+    ddzeta_minus => levels(level)%ddzeta_minus
+    ddzeta_plus_preconditioner => levels(level)%ddzeta_plus_preconditioner
+    ddzeta_minus_preconditioner => levels(level)%ddzeta_minus_preconditioner
 
     if (Nzeta==1) then
 
@@ -580,17 +601,27 @@ subroutine create_grids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, 
     ! *******************************************************************************
     ! *******************************************************************************
 
-    allocate(xi(Nxi))
-    allocate(xiWeights(Nxi))
-    allocate(ddxi_plus(Nxi,Nxi))
-    allocate(ddxi_minus(Nxi,Nxi))
-    allocate(ddxi_plus_preconditioner(Nxi,Nxi))
-    allocate(ddxi_minus_preconditioner(Nxi,Nxi))
+    allocate(levels(level)%xi(Nxi))
+    allocate(levels(level)%xiWeights(Nxi))
+    allocate(levels(level)%ddxi_plus(Nxi,Nxi))
+    allocate(levels(level)%ddxi_minus(Nxi,Nxi))
+    allocate(levels(level)%ddxi_plus_preconditioner(Nxi,Nxi))
+    allocate(levels(level)%ddxi_minus_preconditioner(Nxi,Nxi))
     allocate(d2dxi2(Nxi,Nxi))
     allocate(ddxi(Nxi,Nxi))
-    allocate(pitch_angle_scattering_operator(Nxi,Nxi))
-    allocate(pitch_angle_scattering_operator_preconditioner(Nxi,Nxi))
+    allocate(levels(level)%pitch_angle_scattering_operator(Nxi,Nxi))
+    allocate(levels(level)%pitch_angle_scattering_operator_preconditioner(Nxi,Nxi))
 
+    xi => levels(level)%xi
+    xiWeights    => levels(level)%xiWeights
+
+    ddxi_plus => levels(level)%ddxi_plus
+    ddxi_minus => levels(level)%ddxi_minus
+    ddxi_plus_preconditioner => levels(level)%ddxi_plus_preconditioner
+    ddxi_minus_preconditioner => levels(level)%ddxi_minus_preconditioner
+
+    pitch_angle_scattering_operator => levels(level)%pitch_angle_scattering_operator
+    pitch_angle_scattering_operator_preconditioner => levels(level)%pitch_angle_scattering_operator_preconditioner
 
     ! *******************************************************************************
     ! Handle d/dxi for the pitch angle scattering operator in the main matrix.
@@ -901,6 +932,7 @@ subroutine create_grids(level, Ntheta, Nzeta, Nxi, matrixSize, theta, zeta, xi, 
 !!$  do j=1,Nxi
 !!$     print *,ddxi_minus(j,:)
 !!$  end do
+
 
   end subroutine create_grids
 

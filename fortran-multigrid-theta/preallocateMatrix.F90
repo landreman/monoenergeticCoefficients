@@ -23,7 +23,7 @@ subroutine preallocateMatrix(matrix, whichMatrix, level)
   integer :: Ntheta, Nzeta, Nxi, matrixSize
 
   if (masterProc) then
-     print *,"Beginning preallocation for level",level,"whichMatrix = ",whichMatrix
+     print "(a,i4,a,i4)"," Beginning preallocation for level ",level,", whichMatrix = ",whichMatrix
   end if
 
   Ntheta = levels(level)%Ntheta

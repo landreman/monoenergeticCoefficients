@@ -67,15 +67,17 @@ program mmc
   xi_quadrature_option = 3
   constraint_option = 1
 
-  refine_theta = PETSC_FALSE
-  refine_zeta = PETSC_TRUE
-  refine_xi = PETSC_FALSE
+  coarsen_theta = PETSC_FALSE
+  coarsen_zeta = PETSC_TRUE
+  coarsen_xi = PETSC_FALSE
   Ntheta_min = 5
   Nzeta_min = 7
   Nxi_min = 9
 
   smoothing_option = 1
   restriction_option = 1
+  N_smoothing = 1
+  coarsen_option = 1
 
 #if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
 #define new_argument PETSC_NULL_OBJECT,
@@ -97,14 +99,16 @@ program mmc
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_pitch_angle_scattering_option', preconditioner_pitch_angle_scattering_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-xi_quadrature_option', xi_quadrature_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-constraint_option', constraint_option, wasSet, ierr)
-  call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-refine_theta', refine_theta, wasSet, ierr)
-  call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-refine_zeta', refine_zeta, wasSet, ierr)
-  call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-refine_xi', refine_xi, wasSet, ierr)
+  call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-coarsen_theta', coarsen_theta, wasSet, ierr)
+  call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-coarsen_zeta', coarsen_zeta, wasSet, ierr)
+  call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-coarsen_xi', coarsen_xi, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Ntheta_min', Ntheta_min, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nzeta_min', Nzeta_min, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nxi_min', Nxi_min, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-smoothing_option', smoothing_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-restriction_option', restriction_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-N_smoothing', N_smoothing, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-coarsen_option', coarsen_option, wasSet, ierr)
 
   ! Make sure Ntheta and Nzeta are odd:
   if (mod(Ntheta, 2) == 0) then
@@ -129,14 +133,15 @@ program mmc
      print *,"preconditioner_pitch_angle_scattering_option = ",preconditioner_pitch_angle_scattering_option
      print *,"xi_quadrature_option = ",xi_quadrature_option
      print *,"constraint_option = ",constraint_option
-     print *,"refine_theta = ",refine_theta
-     print *,"refine_zeta = ",refine_zeta
-     print *,"refine_xi = ",refine_xi
+     print *,"coarsen_theta = ",coarsen_theta
+     print *,"coarsen_zeta = ",coarsen_zeta
+     print *,"coarsen_xi = ",coarsen_xi
      print *,"Ntheta_min = ",Ntheta_min
      print *,"Nzeta_min = ",Nzeta_min
      print *,"Nxi_min = ",Nxi_min
      print *,"smoothing_option = ",smoothing_option
      print *,"restriction_option = ",restriction_option
+     print *,"N_smoothing = ",N_smoothing
   end if
 
   if (constraint_option<0 .or. constraint_option>2) stop "Invalid constraint_option"

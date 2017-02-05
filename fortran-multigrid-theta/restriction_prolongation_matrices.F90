@@ -27,6 +27,8 @@ subroutine restriction_prolongation_matrices(fine_level)
   PetscErrorCode :: ierr
   Vec :: row_sums
   integer :: num_rows, num_cols, j, nnz_per_row
+  character(len=100) :: filename
+  PetscViewer :: viewer
 
 
   coarse_level = fine_level + 1
@@ -51,15 +53,15 @@ subroutine restriction_prolongation_matrices(fine_level)
   if (masterProc) then
      print *,"Here comes theta interpolation matrix:"
      do j=1,Ntheta_fine
-        print "(*(f10.6))",theta_prolongation(j,:)
+        print "(*(f6.2))",theta_prolongation(j,:)
      end do
      print *,"Here comes zeta interpolation matrix:"
      do j=1,Nzeta_fine
-        print "(*(f10.6))",zeta_prolongation(j,:)
+        print "(*(f6.2))",zeta_prolongation(j,:)
      end do
      print *,"Here comes xi interpolation matrix:"
      do j=1,Nxi_fine
-        print "(*(f10.6))",xi_prolongation(j,:)
+        print "(*(f6.2))",xi_prolongation(j,:)
      end do
   end if
 
@@ -73,7 +75,7 @@ subroutine restriction_prolongation_matrices(fine_level)
   ! Allocate 7 nonzero entries per row:
   ! This is a very conservative estimate: 2 off-diagonal elements in theta, zeta, and xi, plus the diagonal.
   ! This estimate could surely be made tighter if it mattered significantly, which is probably does not.
-  nnz_per_row = 7
+  nnz_per_row = 8
   if (numProcs == 1) then
      call MatSeqAIJSetPreallocation(multigrid_prolongation_matrices(fine_level), nnz_per_row, PETSC_NULL_INTEGER, ierr)
   else
@@ -82,7 +84,8 @@ subroutine restriction_prolongation_matrices(fine_level)
   print *,"JJJ"
   ! Transfer the source/constraint element at the end by itself:
   if (constraint_option==1) then
-     call MatSetValue(multigrid_prolongation_matrices(fine_level), levels(fine_level)%matrixSize, levels(coarse_level)%matrixSize, &
+     ! Remember -1 since PETSc uses 0-based indices
+     call MatSetValue(multigrid_prolongation_matrices(fine_level), levels(fine_level)%matrixSize-1, levels(coarse_level)%matrixSize-1, &
           one, ADD_VALUES, ierr)
   end if
   print *,"KKK"
@@ -115,7 +118,7 @@ subroutine restriction_prolongation_matrices(fine_level)
   call MatAssemblyBegin(multigrid_prolongation_matrices(fine_level), MAT_FINAL_ASSEMBLY, ierr)
   call MatAssemblyEnd(multigrid_prolongation_matrices(fine_level), MAT_FINAL_ASSEMBLY, ierr)
   print *,"TTT"
-  call MatView(multigrid_prolongation_matrices(fine_level), PETSC_VIEWER_STDOUT_WORLD, ierr)
+  !call MatView(multigrid_prolongation_matrices(fine_level), PETSC_VIEWER_STDOUT_WORLD, ierr)
   ! Now handle the restriction matrix.
   call MatTranspose(multigrid_prolongation_matrices(fine_level), MAT_INITIAL_MATRIX, multigrid_restriction_matrices(fine_level), ierr)
   print *,"UUU"
@@ -141,6 +144,21 @@ subroutine restriction_prolongation_matrices(fine_level)
   call VecDestroy(row_sums, ierr)
   deallocate(theta_prolongation, zeta_prolongation, xi_prolongation)
   print *,"ZZZ"
+
+!!$  ! For verifying the row sums of the prolongation matrix are 1:
+!!$  call MatCreateVecs(multigrid_prolongation_matrices(fine_level), PETSC_NULL_OBJECT, row_sums, ierr)
+!!$  call MatGetRowSum(multigrid_prolongation_matrices(fine_level), row_sums, ierr)
+!!$  call VecView(row_sums,PETSC_VIEWER_STDOUT_WORLD, ierr) 
+
+  write (filename,fmt="(a,i1,a)") "mmc_restriction_matrix_level_",fine_level,".dat"
+  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+  call MatView(multigrid_restriction_matrices(fine_level), viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
+
+  write (filename,fmt="(a,i1,a)") "mmc_prolongation_matrix_level_",fine_level,".dat"
+  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+  call MatView(multigrid_prolongation_matrices(fine_level), viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
 
 end subroutine restriction_prolongation_matrices
 

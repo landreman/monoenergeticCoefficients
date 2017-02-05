@@ -48,6 +48,8 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   ! 0 = low-order preconditioner matrix, used only on the coarsest grid.
   ! 1 = high-order 'real' matrix, used only on the finest grid.
   ! 4 = Like the low-order preconditioner matrix, except the sources and constraints are not included, and there is a 1 on the corresponding diagonal
+  ! 5 = Like 4, but only the diagonal and the off-diagonal-in-zeta terms.
+  ! 6 = Like 4, but only the off-diagonal-in theta, xi, and x terms.
 
   if (masterProc) then
      print "(a,i4,a,i4)"," Entering populateMatrix for level ",level,", whichMatrix = ",whichMatrix
@@ -69,6 +71,14 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   B => levels(level)%B
   dBdtheta => levels(level)%dBdtheta
   dBdzeta => levels(level)%dBdzeta
+
+  ! Ensure all diagonal entries are set
+  if (masterProc .and. whichMatrix==6) then
+  !if (masterProc) then
+     do rowIndex = 0,matrixSize-1
+        call MatSetValue(matrix,rowIndex,rowIndex,zero,ADD_VALUES,ierr)
+     end do
+  end if
 
   ! Add d/dtheta parallel streaming term
   itheta = -1
@@ -92,6 +102,8 @@ subroutine populateMatrix(matrix, whichMatrix, level)
         do izeta = izetaMin,izetaMax
            rowIndex = getIndex(level,ithetaRow, izeta, ixi)
            do ithetaCol = 1,Ntheta
+              if (whichMatrix==5 .and. ithetaCol .ne. ithetaRow) cycle ! For whichMatrix==5, add only the diagonal.
+              if (whichMatrix==6 .and. ithetaCol == ithetaRow) cycle   ! For whichMatrix==6, add only the off-diagonal elements.
               colIndex = getIndex(level,ithetaCol, izeta, ixi)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
                    iota*B(ithetaRow,izeta)*xi(ixi)*derivative_matrix_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
@@ -101,34 +113,36 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   end do
   
   ! Add d/dzeta parallel streaming term
-  izeta = -1
-  ithetaRow = -1
-  ithetaCol = -1
-  do ixi = 1,Nxi
-     if (xi(ixi)>0) then
-        if (whichMatrix == 1) then
-           derivative_matrix_to_use => levels(level)%ddzeta_plus
+  if (whichMatrix .ne. 6) then
+     izeta = -1
+     ithetaRow = -1
+     ithetaCol = -1
+     do ixi = 1,Nxi
+        if (xi(ixi)>0) then
+           if (whichMatrix == 1) then
+              derivative_matrix_to_use => levels(level)%ddzeta_plus
+           else
+              derivative_matrix_to_use => levels(level)%ddzeta_plus_preconditioner
+           end if
         else
-           derivative_matrix_to_use => levels(level)%ddzeta_plus_preconditioner
+           if (whichMatrix == 1) then
+              derivative_matrix_to_use => levels(level)%ddzeta_minus
+           else
+              derivative_matrix_to_use => levels(level)%ddzeta_minus_preconditioner
+           end if
         end if
-     else
-        if (whichMatrix == 1) then
-           derivative_matrix_to_use => levels(level)%ddzeta_minus
-        else
-           derivative_matrix_to_use => levels(level)%ddzeta_minus_preconditioner
-        end if
-     end if
-     do izetaRow = izetaMin,izetaMax
-        do itheta = ithetaMin,ithetaMax
-           rowIndex = getIndex(level,itheta, izetaRow, ixi)
-           do izetaCol = 1,Nzeta
-              colIndex = getIndex(level,itheta, izetaCol, ixi)
-              call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                   B(itheta,izetaRow)*xi(ixi)*derivative_matrix_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+        do izetaRow = izetaMin,izetaMax
+           do itheta = ithetaMin,ithetaMax
+              rowIndex = getIndex(level,itheta, izetaRow, ixi)
+              do izetaCol = 1,Nzeta
+                 colIndex = getIndex(level,itheta, izetaCol, ixi)
+                 call MatSetValueSparse(matrix, rowIndex, colIndex, &
+                      B(itheta,izetaRow)*xi(ixi)*derivative_matrix_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+              end do
            end do
         end do
      end do
-  end do
+  end if
   
   ! Add mirror term and collision operator
   izetaRow = -1
@@ -158,6 +172,8 @@ subroutine populateMatrix(matrix, whichMatrix, level)
               end if
            end if
            do ixiCol = 1,Nxi
+              if (whichMatrix==5 .and. ixiCol .ne. ixiRow) cycle ! For whichMatrix==5, add only the diagonal.
+              if (whichMatrix==6 .and. ixiCol  ==  ixiRow) cycle ! For whichMatrix==6, add only the off-diagonal elements.
               colIndex = getIndex(level,itheta,izeta,ixiCol)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
                    temp * derivative_matrix_to_use(ixiRow,ixiCol) &  ! Mirror term
@@ -185,7 +201,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      do izeta = 1,Nzeta
         do itheta = 1,Ntheta
            do ixi = 1,Nxi
-              values(getIndex(level,itheta,izeta,ixi),1) = (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta))
+              values(getIndex(level,itheta,izeta,ixi)+1,1) = (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta))
            end do
         end do
      end do
@@ -193,8 +209,8 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      deallocate(row_indices, col_indices, values)
   end if
 
-  ! For smoothing_option 1, we need a 1 on the diagonal element corresponding to the sources/constraints:
-  if (constraint_option==1 .and. masterProc .and. (whichMatrix==4)) then
+  ! For smoothing, we may need a 1 on the diagonal element corresponding to the sources/constraints:
+  if (constraint_option==1 .and. masterProc .and. (whichMatrix==4 .or. whichMatrix==5)) then
      call MatSetValue(matrix,matrixSize-1,matrixSize-1,one,ADD_VALUES,ierr) ! -1 because PETSc uses 0-based indices.
   end if
 
@@ -210,10 +226,10 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      call MatNullSpaceDestroy(nullspace,ierr)
   end if
 
-  write (filename,fmt="(a,i1,a)") "mmc_matrix_",whichMatrix,".dat"
-  !call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
-  !call MatView(matrix, viewer, ierr)
-  !call PetscViewerDestroy(viewer, ierr)
+  write (filename,fmt="(a,i1,a,i1,a)") "mmc_matrix_level_",level,'_whichMatrix_',whichMatrix,".dat"
+  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+  call MatView(matrix, viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
 
 
 

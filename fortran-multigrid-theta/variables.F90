@@ -29,12 +29,12 @@ module variables
   PetscInt :: pitch_angle_scattering_option, preconditioner_pitch_angle_scattering_option
   PetscInt :: xi_quadrature_option, constraint_option
 
-  PetscBool :: refine_theta, refine_zeta, refine_xi
+  PetscBool :: coarsen_theta, coarsen_zeta, coarsen_xi
   PetscInt :: N_levels
   PetscInt, allocatable, dimension(:) :: Ntheta_levels, Nzeta_levels, Nxi_levels
   PetscInt :: Ntheta_min, Nzeta_min, Nxi_min
 
-  PetscInt :: smoothing_option, restriction_option, N_smoothing=1
+  PetscInt :: smoothing_option, restriction_option, N_smoothing=1, coarsen_option=1
 
   type :: multigrid_level
      PetscInt :: Ntheta, Nzeta, Nxi, matrixSize
@@ -69,7 +69,9 @@ module variables
      Vec :: residual_vec, solution_vec, temp_vec, smoother_shift, rhs_vec
 
      Mat :: Jacobi_iteration_matrix
+     Mat :: smoothing_diagonal_matrix, smoothing_off_diagonal_matrix
      Vec :: omega_times_inverse_diagonal
+     KSP :: smoothing_KSP
 
   end type multigrid_level
 

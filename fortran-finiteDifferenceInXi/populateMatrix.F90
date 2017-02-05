@@ -158,7 +158,7 @@ subroutine populateMatrix(matrix, whichMatrix)
      do izeta = 1,Nzeta
         do itheta = 1,Ntheta
            do ixi = 1,Nxi
-              values(getIndex(itheta,izeta,ixi),1) = (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta))
+              values(getIndex(itheta,izeta,ixi)+1,1) = (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta))
            end do
         end do
      end do

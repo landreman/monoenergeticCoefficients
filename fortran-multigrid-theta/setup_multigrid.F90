@@ -16,6 +16,10 @@ subroutine setup_multigrid()
   PC :: preconditioner_context
   Vec :: temp_vec
   PetscErrorCode :: ierr
+  character(len=100) :: filename
+  PetscViewer :: viewer
+
+  if (masterProc) print *,"Entering setup_multigrid"
 
   call set_grid_resolutions()
 
@@ -73,10 +77,76 @@ subroutine setup_multigrid()
 
         ! At this point Jacobi_iteration_matrix is -omega * (D^{-1}) * (L+U+D). We need to change the diagonal elements to 1-omega:
         call VecSet(temp_vec, one-Jacobi_omega, ierr)
+        !call VecSetValue(temp_vec, levels(level)%matrixSize-1, one, INSERT_VALUES, ierr) ! Sets the last element to 1.0
+        call VecSetValue(temp_vec, levels(level)%matrixSize-1, zero, INSERT_VALUES, ierr) ! Sets the last element to 0.0
+        call VecAssemblyBegin(temp_vec, ierr)
+        call VecAssemblyEnd(temp_vec, ierr)
         call MatDiagonalSet(levels(level)%Jacobi_iteration_matrix, temp_vec, INSERT_VALUES, ierr)
         call VecDestroy(temp_vec)
 
-        ! Set last element of omega_times_inverse_diagonal to be 0?
+        ! Set last element of omega_times_inverse_diagonal to be 0, for use in the smoothing iterations:
+        call VecSetValue(levels(level)%omega_times_inverse_diagonal, levels(level)%matrixSize-1, zero, INSERT_VALUES, ierr) ! Sets the last element to 0.0
+        call VecAssemblyBegin(levels(level)%omega_times_inverse_diagonal, ierr)
+        call VecAssemblyEnd(levels(level)%omega_times_inverse_diagonal, ierr)
+
+        write (filename,fmt="(a,i1,a)") "mmc_Jacobi_iteration_matrix_level_",level,".dat"
+        call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+        call MatView(levels(level)%Jacobi_iteration_matrix, viewer, ierr)
+        call PetscViewerDestroy(viewer, ierr)
+     end do
+
+  case (2)
+     do level = 1,N_levels-1  ! We don't need to smooth on the coarsest level, where we do a direct solve.
+
+        ! [(1-omega)I + omega D] u = omega b = [(1-omega)I - omega(L+U)] u 
+
+        ! Make matrices which are just like the low-order matrix, but without the sources and constraints:
+        ! Diagonal part, and off-diagonal in zeta:
+        call preallocateMatrix(levels(level)%smoothing_diagonal_matrix,5,level)
+        call populateMatrix(levels(level)%smoothing_diagonal_matrix,5,level)
+        ! Off-diagonal terms in theta and xi:
+        call preallocateMatrix(levels(level)%smoothing_off_diagonal_matrix,6,level)
+        call populateMatrix(levels(level)%smoothing_off_diagonal_matrix,6,level)
+
+        print *,"11111"
+        ! Scale and shift diagonals:
+        call MatScale(levels(level)%smoothing_diagonal_matrix, Jacobi_omega, ierr)
+        !call MatCreateVecs(levels(level)%smoothing_diagonal_matrix, temp_vec, PETSC_NULL_OBJECT,ierr)
+        print *,"@@@@@@@"
+        !call VecSet(temp_vec, one-Jacobi_omega, ierr)
+        print *,"2222222"
+        !call MatDiagonalSet(levels(level)%smoothing_diagonal_matrix, temp_vec, ADD_VALUES, ierr)
+        call MatShift(levels(level)%smoothing_diagonal_matrix, one-Jacobi_omega, ierr)
+        print *,"333333"
+
+        call MatScale(levels(level)%smoothing_off_diagonal_matrix, -Jacobi_omega, ierr)
+        print *,"3.5  3.5   3.5"
+        !call MatDiagonalSet(levels(level)%smoothing_off_diagonal_matrix, temp_vec, ADD_VALUES, ierr)
+        call MatShift(levels(level)%smoothing_off_diagonal_matrix, one-Jacobi_omega, ierr)
+        print *,"3.7 3.7 3.7"
+        !call VecDestroy(temp_vec)
+        print *,"44444"
+        call KSPCreate(PETSC_COMM_WORLD,levels(level)%smoothing_ksp,ierr)
+        print *,"4.5 4.5 4.5"
+        call KSPSetOperators(levels(level)%smoothing_ksp, levels(level)%smoothing_diagonal_matrix, levels(level)%smoothing_diagonal_matrix, ierr)
+        print *,"55555"
+        call KSPGetPC(levels(level)%smoothing_ksp,preconditioner_context,ierr)
+        print *,"5.5 5.5 5.5"
+        call PCSetType(preconditioner_context,PCLU,ierr)
+        call KSPSetType(levels(level)%smoothing_ksp, KSPPREONLY, ierr)
+        call PCFactorSetMatSolverPackage(preconditioner_context, MATSOLVERMUMPS, ierr)
+
+        print *,"666666"
+        write (filename,fmt="(a,i1,a)") "mmc_smoothing_diagonal_matrix_level_",level,".dat"
+        call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+        call MatView(levels(level)%smoothing_diagonal_matrix, viewer, ierr)
+        call PetscViewerDestroy(viewer, ierr)
+
+        write (filename,fmt="(a,i1,a)") "mmc_smoothing_off_diagonal_matrix_level_",level,".dat"
+        call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+        call MatView(levels(level)%smoothing_off_diagonal_matrix, viewer, ierr)
+        call PetscViewerDestroy(viewer, ierr)
+
      end do
   case default
      print *,"Invalid smoothing_option:",smoothing_option

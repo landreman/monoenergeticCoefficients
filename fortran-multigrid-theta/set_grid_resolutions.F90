@@ -20,12 +20,12 @@ subroutine set_grid_resolutions()
   Ntheta_min = min(Ntheta_min,Ntheta)
   Nzeta_min  = min(Nzeta_min ,Nzeta)
   Nxi_min    = min(Nxi_min   ,Nxi)
-!  if (refine_theta) N_levels = max(N_levels,ceiling(log(Ntheta*one/Ntheta_min) / log(two) - small) +1)
-!  if (refine_zeta ) N_levels = max(N_levels,ceiling(log(Nzeta *one/ Nzeta_min) / log(two) - small) +1)
-!  if (refine_xi   ) N_levels = max(N_levels,ceiling(log((Nxi-one)/ (Nxi_min-one)) / log(two) - small) +1)
-  if (refine_theta) N_levels = max(N_levels,nint(log(Ntheta*one/Ntheta_min) / log(two) - small) +1)
-  if (refine_zeta ) N_levels = max(N_levels,nint(log(Nzeta *one/ Nzeta_min) / log(two) - small) +1)
-  if (refine_xi   ) N_levels = max(N_levels,nint(log((Nxi-one)/ (Nxi_min-one)) / log(two) - small) +1)
+!  if (coarsen_theta) N_levels = max(N_levels,ceiling(log(Ntheta*one/Ntheta_min) / log(two) - small) +1)
+!  if (coarsen_zeta ) N_levels = max(N_levels,ceiling(log(Nzeta *one/ Nzeta_min) / log(two) - small) +1)
+!  if (coarsen_xi   ) N_levels = max(N_levels,ceiling(log((Nxi-one)/ (Nxi_min-one)) / log(two) - small) +1)
+  if (coarsen_theta) N_levels = max(N_levels,nint(log(Ntheta*one/Ntheta_min) / log(two) - small) +1)
+  if (coarsen_zeta ) N_levels = max(N_levels,nint(log(Nzeta *one/ Nzeta_min) / log(two) - small) +1)
+  if (coarsen_xi   ) N_levels = max(N_levels,nint(log((Nxi-one)/ (Nxi_min-one)) / log(two) - small) +1)
 
   if (N_levels<1) stop "Error! N_levels<1"
   allocate(levels(N_levels))
@@ -36,9 +36,18 @@ subroutine set_grid_resolutions()
      levels(1)%Nxi = Nxi
   else
      ! Handle theta:
-     if (refine_theta) then
+     if (coarsen_theta) then
         do j=1,N_levels
-           temp_float = exp(log(Ntheta*one) - (j-one)/(N_levels-one)*log(Ntheta*one/Ntheta_min))
+           select case (coarsen_option)
+           case (1)
+              temp_float = max(one*Ntheta_min, Ntheta * (0.5 ** (j-1)))
+           case (2)
+              temp_float = exp(log(Ntheta*one) - (j-one)/(N_levels-one)*log(Ntheta*one/Ntheta_min))
+           case default
+              print *,"Invalid coarsen_option:",coarsen_option
+              stop
+           end select
+
            temp_int = nint(temp_float)
            if (mod(temp_int,2)==1) then
               levels(j)%Ntheta = temp_int
@@ -58,9 +67,18 @@ subroutine set_grid_resolutions()
      end if
 
      ! Handle zeta:
-     if (refine_zeta) then
+     if (coarsen_zeta) then
         do j=1,N_levels
-           temp_float = exp(log(Nzeta*one) - (j-one)/(N_levels-one)*log(Nzeta*one/Nzeta_min))
+           select case (coarsen_option)
+           case (1)
+              temp_float = max(one*Nzeta_min, Nzeta * (0.5 ** (j-1)))
+           case (2)
+              temp_float = exp(log(Nzeta*one) - (j-one)/(N_levels-one)*log(Nzeta*one/Nzeta_min))
+           case default
+              print *,"Invalid coarsen_option:",coarsen_option
+              stop
+           end select
+
            temp_int = nint(temp_float)
            if (mod(temp_int,2)==1) then
               levels(j)%Nzeta = temp_int
@@ -80,10 +98,21 @@ subroutine set_grid_resolutions()
      end if
 
      ! Handle xi:
-     if (refine_xi) then
-        do j=1,N_levels
-           levels(j)%Nxi = nint(exp(log(Nxi-one) - (j-one)/(N_levels-one)*log((Nxi-one)/(Nxi_min-one)))) + 1
-        end do
+     if (coarsen_xi) then
+        select case (coarsen_option)
+        case (1)
+           do j=1,N_levels
+              levels(j)%Nxi = max(Nxi_min, nint((Nxi-1) * (0.5 ** (j-1)) + 1))
+           end do
+        case (2)
+           do j=1,N_levels
+              levels(j)%Nxi = nint(exp(log(Nxi-one) - (j-one)/(N_levels-one)*log((Nxi-one)/(Nxi_min-one)))) + 1
+           end do
+        case default
+           print *,"Invalid coarsen_option:",coarsen_option
+           stop
+        end select
+
      else
         do j=1,N_levels
            levels(j)%Nxi = Nxi

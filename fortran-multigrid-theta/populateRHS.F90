@@ -53,8 +53,8 @@ subroutine populateRHS(vec)
   call VecAssemblyBegin(vec, ierr)
   call VecAssemblyEnd(vec, ierr)
 
-  !call PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mmc_rhs.dat", FILE_MODE_WRITE, viewer, ierr)
-  !call VecView(vec, viewer, ierr)
-  !call PetscViewerDestroy(viewer, ierr)
+  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mmc_rhs.dat", FILE_MODE_WRITE, viewer, ierr)
+  call VecView(vec, viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
 
 end subroutine populateRHS

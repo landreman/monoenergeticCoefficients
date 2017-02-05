@@ -11,22 +11,23 @@ mmc_defaults()
 
 global nu E
 nu = 0.01;
-E = 0.03;
+E = 0;
 
 global Ntheta Nzeta Nxi
-Ntheta = 15;
-Nzeta = 15;
-Nxi = 30;
+Ntheta = 13;
+Nzeta = 30; %15;
+Nxi = 30; %16;
 
 global coarsen_theta coarsen_zeta coarsen_xi
-coarsen_theta = false;
+coarsen_theta = true;
 coarsen_zeta  = true;
-coarsen_xi    = false;
+coarsen_xi    = true;
 
 
 mmc_main()
 
 
 directory = ['/Users/mattland/monoenergeticCoefficients/fortran-multigrid-theta'];
-%mmc_compareToFortran(fullfile(directory,'sfincsOutput.h5'))
-mmc_compareMatricesAndVectorsToFortran(directory)
+mmc_compare_to_fortran(fullfile(directory,'mmc_out'))
+
+mmc_compare_matrices_and_vectors_to_fortran(directory)

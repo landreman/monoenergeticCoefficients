@@ -1,8 +1,110 @@
-function mmc_compareMatricesAndVectorsToFortran(directory)
+function mmc_compare_matrices_and_vectors_to_fortran(directory)
 
-global Jacobian preconditionerMatrix initialResidual stateVector
+global N_levels levels fine_matrix rhs smoothing_option
+global multigrid_restriction_matrices multigrid_prolongation_matrices
 
-addpath('~/petsc-3.6.3/share/petsc/matlab')
+%addpath('~/petsc-3.6.3/share/petsc/matlab')
+addpath('/Users/mattland/petsc/petsc-3.7.5/share/petsc/matlab')
+
+% Compare restriction matrices:
+for level = 1:(N_levels-1)
+    filename = fullfile(directory,sprintf('mmc_restriction_matrix_level_%d.dat',level));
+    if exist(filename,'file')==0
+        fprintf('** Expected file %s does not exist.\n',filename)
+    else
+        matrix_fortran = PetscBinaryRead(filename);
+        difference = full(max(max(abs(matrix_fortran - multigrid_restriction_matrices{level}))));
+        if difference < 1e-8
+            fprintf('  Restriction matrix on level %d agrees. (diff=%g)\n',level,difference)
+        else
+            fprintf('** Difference = %g between restriction matrices on level %d.',difference,level)
+        end
+    end
+end
+
+
+% Compare prolongation matrices:
+for level = 1:(N_levels-1)
+    filename = fullfile(directory,sprintf('mmc_prolongation_matrix_level_%d.dat',level));
+    if exist(filename,'file')==0
+        fprintf('** Expected file %s does not exist.\n',filename)
+    else
+        matrix_fortran = PetscBinaryRead(filename);
+        difference = full(max(max(abs(matrix_fortran - multigrid_prolongation_matrices{level}))));
+        if difference < 1e-8
+            fprintf('  Prolongation matrix on level %d agrees. (diff=%g)\n',level,difference)
+        else
+            fprintf('** Difference = %g between prolongation matrices on level %d.',difference,level)
+        end
+    end
+end
+
+% Compare low-order matrices:
+for level = 1:N_levels
+    filename = fullfile(directory,sprintf('mmc_matrix_level_%d_whichMatrix_0.dat',level));
+    if exist(filename,'file')==0
+        fprintf('** Expected file %s does not exist.\n',filename)
+    else
+        matrix_fortran = PetscBinaryRead(filename);
+        difference = full(max(max(abs(matrix_fortran - levels(level).low_order_matrix))));
+        if difference < 1e-8
+            fprintf('  Low order matrix on level %d agrees. (diff=%g)\n',level,difference)
+        else
+            fprintf('** Difference = %g between low order matrices on level %d.',difference,level)
+        end
+    end
+end
+
+% Compare high-order matrix on the fine level
+filename = fullfile(directory,'mmc_matrix_level_1_whichMatrix_1.dat');
+if exist(filename,'file')==0
+    fprintf('** Expected file %s does not exist.\n',filename)
+else
+    matrix_fortran = PetscBinaryRead(filename);
+    difference = full(max(max(abs(matrix_fortran - fine_matrix))));
+    if difference < 1e-8
+        fprintf('  High order matrix agrees. (diff=%g)\n',difference)
+    else
+        fprintf('** Difference = %g between high order matrices.',difference)
+    end
+end
+
+% Compare right hand side vector
+filename = fullfile(directory,'mmc_rhs.dat');
+if exist(filename,'file')==0
+    fprintf('** Expected file %s does not exist.\n',filename)
+else
+    matrix_fortran = PetscBinaryRead(filename);
+    difference = full(max(max(abs(matrix_fortran - rhs))));
+    if difference < 1e-8
+        fprintf('  RHS vector agrees. (diff=%g)\n',difference)
+    else
+        fprintf('** Difference = %g between RHS vectors.',difference)
+    end
+end
+
+% Compare smoothing matrices
+for level = 1:(N_levels-1)
+    switch smoothing_option
+        case 1
+            filename = fullfile(directory,sprintf('mmc_Jacobi_iteration_matrix_level_%d.dat',level));
+            if exist(filename,'file')==0
+                fprintf('** Expected file %s does not exist.\n',filename)
+            else
+                matrix_fortran = PetscBinaryRead(filename);
+                difference = full(max(max(abs(matrix_fortran - levels(level).Jacobi_iteration_matrix))));
+                if difference < 1e-8
+                    fprintf('  Jacobi iteration matrix on level %d agrees. (diff=%g)\n',level,difference)
+                else
+                    fprintf('** Difference = %g between Jacobi iteration matrices on level %d.',difference,level)
+                end
+            end
+        otherwise
+            error('Invalid smoothing_option')
+    end
+end
+return
+
 
 % Check how many Jacobian matrices were saved:
 for i=0:100

@@ -13,7 +13,7 @@ module variables
 !#include <finclude/petscsysdef.h>
 
   PetscInt :: Ntheta, Nzeta, Nxi, Nperiods, helicity_l, matrixSize
-  PetscReal :: nu, epsilon_t, epsilon_h, iota, G, I
+  PetscReal :: nu, E, epsilon_t, epsilon_h, iota, G, I
   PetscOffset :: offset
   PetscInt :: myRank, numProcs
   logical :: masterProc
@@ -81,5 +81,7 @@ module variables
 
   PetscScalar :: Jacobi_omega = (2.0d+0)/(3.0d+0)
   KSP :: ksp_on_coarsest_level
+
+  PetscReal :: flux, flow
 
 end module variables

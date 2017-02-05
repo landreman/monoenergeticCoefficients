@@ -19,7 +19,7 @@ Nzeta = 15;
 Nxi = 30;
 
 global Ntheta_min Nzeta_min Nxi_min
-Ntheta_min = 5;
+Ntheta_min = 7;
 Nzeta_min = 7;
 Nxi_min = 9;
 

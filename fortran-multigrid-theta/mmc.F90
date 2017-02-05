@@ -28,6 +28,7 @@ program mmc
   PetscInt :: userContext ! Not used
   Mat :: high_order_matrix_on_finest_level
   PetscInt :: VecLocalSize
+  integer :: unit
 #if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
   PetscViewerAndFormat vf
 #endif
@@ -44,6 +45,7 @@ program mmc
 
   ! Set defaults:
   nu = 0.1d+0
+  E = 0
   epsilon_t = -0.07053d+0
   epsilon_h = 0.05067d+0
   iota = 0.4542d+0
@@ -59,8 +61,8 @@ program mmc
   preconditioner_theta_derivative_option = 4
   zeta_derivative_option = 8
   preconditioner_zeta_derivative_option = 4
-  xi_derivative_option = 3
-  preconditioner_xi_derivative_option = 2
+  xi_derivative_option = 8
+  preconditioner_xi_derivative_option = 4
   pitch_angle_scattering_option = 3
   preconditioner_pitch_angle_scattering_option = 2
 
@@ -70,7 +72,7 @@ program mmc
   coarsen_theta = PETSC_FALSE
   coarsen_zeta = PETSC_TRUE
   coarsen_xi = PETSC_FALSE
-  Ntheta_min = 5
+  Ntheta_min = 7
   Nzeta_min = 7
   Nxi_min = 9
 
@@ -89,6 +91,7 @@ program mmc
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-nu', nu, wasSet, ierr)
+  call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-E', E, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-theta_derivative_option', theta_derivative_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_theta_derivative_option', preconditioner_theta_derivative_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-zeta_derivative_option', zeta_derivative_option, wasSet, ierr)
@@ -123,6 +126,7 @@ program mmc
      print *,"Nzeta = ",Nzeta
      print *,"Nxi = ",Nxi
      print *,"nu = ",nu
+     print *,"E = ",E
      print *,"theta_derivative_option = ",theta_derivative_option
      print *,"preconditioner_theta_derivative_option = ",preconditioner_theta_derivative_option
      print *,"zeta_derivative_option = ",zeta_derivative_option
@@ -193,4 +197,50 @@ program mmc
 
   call PETScFinalize(ierr)
 
+  ! Write an ascii output file
+  unit = 9
+  open(unit, file='mmc_out')
+  write (unit,*) Ntheta
+  write (unit,*) Nzeta
+  write (unit,*) Nxi
+  write (unit,*) nu
+  write (unit,*) E
+  write (unit,*) theta_derivative_option
+  write (unit,*) preconditioner_theta_derivative_option
+  write (unit,*) zeta_derivative_option
+  write (unit,*) preconditioner_zeta_derivative_option
+  write (unit,*) xi_derivative_option
+  write (unit,*) preconditioner_xi_derivative_option
+  write (unit,*) pitch_angle_scattering_option
+  write (unit,*) preconditioner_pitch_angle_scattering_option
+  write (unit,*) xi_quadrature_option
+  write (unit,*) constraint_option
+  write (unit,*) logical_to_int(coarsen_theta)
+  write (unit,*) logical_to_int(coarsen_zeta)
+  write (unit,*) logical_to_int(coarsen_xi)
+  write (unit,*) Ntheta_min
+  write (unit,*) Nzeta_min
+  write (unit,*) Nxi_min
+  write (unit,*) smoothing_option
+  write (unit,*) restriction_option
+  write (unit,*) N_smoothing
+  write (unit,*) flux
+  write (unit,*) flow
+  close(unit)
+
+
+contains
+
+  function logical_to_int(input_logical)
+    logical, intent(in) :: input_logical
+    integer :: logical_to_int
+    if (input_logical) then
+       logical_to_int = 1
+    else
+       logical_to_int = 0
+    end if
+  end function logical_to_int
+
 end program
+
+

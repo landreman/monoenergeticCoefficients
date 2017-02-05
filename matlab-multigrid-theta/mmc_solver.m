@@ -29,7 +29,8 @@ ylabel('Relative residual');
 title('Convergence of GMRES preconditioned with multigrid');
 
     function solution_vector = apply_multigrid_cycle(rhs_vector)
-        
+        fprintf(' Entering apply_multigrid_cycle.\n')
+
         levels(1).rhs_vector = rhs_vector;
         
         % Proceed from the fine level to the coarse level

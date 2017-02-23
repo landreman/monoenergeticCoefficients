@@ -23,7 +23,7 @@ subroutine preallocateMatrix(matrix)
   allocate(predictedNNZsForEachRow(matrixSize))
   allocate(predictedNNZsForEachRowDiagonal(matrixSize))
   ! Set tempInt1 to the expected number of nonzeros in a row of the kinetic equation block:
-  tempInt1 = (6+6)*3 + 1 ! The ddtheta and ddzeta terms are tridiagonal in L, with 6 nonzeros per row in each L. Add 1 for source.
+  tempInt1 = (7+7)*5 + 1 ! The ddtheta and ddzeta terms are penta-diagonal in L, with up to 7 nonzeros per row in each L. Add 1 for source.
   if (tempInt1 > matrixSize) then
      tempInt1 = matrixSize
   end if

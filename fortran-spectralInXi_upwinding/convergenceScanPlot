@@ -65,6 +65,8 @@ for directory in directories:
 
        data = f.readline().split()
        flow = float(data[2])
+       if numpy.isinf(flow):
+          flow = numpy.NaN
 
        data = f.readline().split()
        time = float(data[2])

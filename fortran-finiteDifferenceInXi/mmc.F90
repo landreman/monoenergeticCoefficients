@@ -63,20 +63,27 @@ program mmc
 
   xi_quadrature_option = 3
   constraint_option = 2
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
-  call PetscOptionsGetReal(PETSC_NULL_CHARACTER, '-nu', nu, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-theta_derivative_option', theta_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_theta_derivative_option', preconditioner_theta_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-zeta_derivative_option', zeta_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_zeta_derivative_option', preconditioner_zeta_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-xi_derivative_option', xi_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_xi_derivative_option', preconditioner_xi_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-pitch_angle_scattering_option', pitch_angle_scattering_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-preconditioner_pitch_angle_scattering_option', preconditioner_pitch_angle_scattering_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-xi_quadrature_option', xi_quadrature_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_CHARACTER, '-constraint_option', constraint_option, wasSet, ierr)
+
+#if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
+#define new_argument PETSC_NULL_OBJECT,
+#else
+#define new_argument
+#endif
+
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
+  call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-nu', nu, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-theta_derivative_option', theta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_theta_derivative_option', preconditioner_theta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-zeta_derivative_option', zeta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_zeta_derivative_option', preconditioner_zeta_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-xi_derivative_option', xi_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_xi_derivative_option', preconditioner_xi_derivative_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-pitch_angle_scattering_option', pitch_angle_scattering_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_pitch_angle_scattering_option', preconditioner_pitch_angle_scattering_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-xi_quadrature_option', xi_quadrature_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-constraint_option', constraint_option, wasSet, ierr)
 
   if (masterProc) then
      print *,"Ntheta = ",Ntheta
@@ -120,7 +127,8 @@ program mmc
   call KSPMonitorSet(ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
 #else
   call PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, vf, ierr) 
-  call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
+  !call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
+  call KSPMonitorSet(ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
 #endif
   call KSPSetFromOptions(ksp,ierr)
 

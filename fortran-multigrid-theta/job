@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#./mmc -nu 0.001 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 2000 -options_left | tee output
+
+#./mmc -nu 0.001 -Ntheta 27 -Nzeta 29 -Nx 70 -ksp_gmres_restart 2000 -options_left \
+#    -defect_option 4 -N_post_smoothing 1 | tee output
+
+#./mmc -nu 0.0001 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 2000 -options_left \
+#    -defect_option 4 -N_post_smoothing 1 | tee output
+
+#./mmc -nu 1e-4 -Ntheta 50 -Nzeta 50 -Nxi 140 -ksp_gmres_restart 2000 -options_left \
+#    -defect_option 1 -N_post_smoothing 1 | tee output
+
+./mmc -nu 0.001 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 2000 -ksp_type fgmres -ksp_max_it 100 -options_left  \
+    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -pitch_angle_scattering_option 2 \
+    -smoothing_option 1 -constraint_option 1 -Jacobi_omega 1 \
+    -defect_option 1 -N_post_smoothing 1 | tee output
+

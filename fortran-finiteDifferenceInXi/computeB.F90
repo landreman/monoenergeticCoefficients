@@ -8,7 +8,7 @@
 subroutine computeB()
 
   use variables, only: Ntheta, Nzeta, epsilon_t, epsilon_h, helicity_l, Nperiods, B, dBdtheta, dBdzeta, theta, zeta, &
-       VPrime, thetaWeights, zetaWeights
+       VPrime, FSAB2, thetaWeights, zetaWeights
 
   implicit none
   
@@ -35,5 +35,6 @@ subroutine computeB()
         VPrime = VPrime + thetaWeights(itheta)*zetaWeights(izeta)/(B(itheta,izeta) ** 2)
      end do
   end do
+  FSAB2 = sum(thetaWeights)*sum(zetaWeights)/VPrime
      
 end subroutine computeB

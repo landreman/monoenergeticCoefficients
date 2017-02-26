@@ -22,12 +22,22 @@ subroutine diagnostics(solution)
   Vec :: solnOnProc0
   PetscViewer :: viewer
   PetscInt :: itheta, izeta, ixi, index
-  PetscReal :: flux, flow
   PetscScalar, pointer :: solnArray(:)
+  PetscScalar, dimension(:), pointer :: xi, thetaWeights, zetaWeights, xiWeights
+  PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
 
   if (masterProc) then
      print *,"Entering diagnostics"
   end if
+
+  ! For convenience, use some pointers to refer to quantities on the finest grid:
+  xi => levels(1)%xi
+  thetaWeights => levels(1)%thetaWeights
+  zetaWeights  => levels(1)%zetaWeights
+  xiWeights    => levels(1)%xiWeights
+  B => levels(1)%B
+  dBdtheta => levels(1)%dBdtheta
+  dBdzeta => levels(1)%dBdzeta
 
   flux = 0
   flow = 0
@@ -46,7 +56,7 @@ subroutine diagnostics(solution)
            do ixi = 1,Nxi
 
               ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-              index = getIndex(itheta,izeta,ixi)+1
+              index = getIndex(1,itheta,izeta,ixi)+1
 
               flux = flux + solnArray(index) * (1+xi(ixi)*xi(ixi)) &
                    * (G * dBdtheta(itheta,izeta) - I * dBdzeta(itheta,izeta))/(B(itheta,izeta) ** 3) &
@@ -57,14 +67,17 @@ subroutine diagnostics(solution)
            end do
         end do
      end do
+
+     if (constraint_option==1) then
+        print *,"Source = ",solnArray(levels(1)%matrixSize)
+     end if
           
      call VecRestoreArrayF90(solnOnProc0, solnArray, ierr)
 
      flow = flow * 2 / (sqrtpi*G*VPrime)
      flux = -2 / (sqrtpi*G*G*VPrime)*flux
      
-     print *,"VPrime =",VPrime,", FSAB2 =",FSAB2
-     print *,"Results: flux =",flux,", flow =",flow
+     print *,"Results: VPrime = ",VPrime,", flux = ",flux,", flow = ",flow
   end if
 
 

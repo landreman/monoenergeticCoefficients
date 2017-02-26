@@ -12,6 +12,9 @@ module variables
 !!#include <finclude/petscsys.h>
 !#include <finclude/petscsysdef.h>
 
+  KSP :: main_ksp
+  PC :: preconditioner_context
+
   PetscInt :: Ntheta, Nzeta, Nxi, Nperiods, helicity_l, matrixSize
   PetscReal :: nu, E, epsilon_t, epsilon_h, iota, G, I
   PetscOffset :: offset
@@ -34,7 +37,7 @@ module variables
   PetscInt, allocatable, dimension(:) :: Ntheta_levels, Nzeta_levels, Nxi_levels
   PetscInt :: Ntheta_min, Nzeta_min, Nxi_min
 
-  PetscInt :: smoothing_option, restriction_option, N_pre_smoothing=1, N_post_smoothing=1, coarsen_option=1, defect_option
+  PetscInt :: smoothing_option, restriction_option, coarsen_option=1, defect_option
 
   type :: multigrid_level
      PetscInt :: Ntheta, Nzeta, Nxi, matrixSize
@@ -66,21 +69,14 @@ module variables
      PetscInt :: izetaMin, izetaMax
 
      Mat :: low_order_matrix, high_order_matrix, mixed_order_matrix
-     Vec :: residual_vec, solution_vec, temp_vec, smoother_shift, rhs_vec
 
-     Mat :: Jacobi_iteration_matrix
-     Mat :: smoothing_diagonal_matrix, smoothing_off_diagonal_matrix
-     Vec :: omega_times_inverse_diagonal
-     KSP :: smoothing_KSP
+     Mat :: smoothing_matrix
 
   end type multigrid_level
 
   type (multigrid_level), allocatable, dimension(:), target :: levels
 
   Mat, allocatable, dimension(:) :: multigrid_prolongation_matrices, multigrid_restriction_matrices
-
-  PetscScalar :: Jacobi_omega = (2.0d+0)/(3.0d+0)
-  KSP :: ksp_on_coarsest_level
 
   PetscReal :: flux, flow
   PetscReal :: zeta_diffusion, theta_diffusion

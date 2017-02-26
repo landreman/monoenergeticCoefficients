@@ -13,7 +13,7 @@ module variables
 !#include <finclude/petscsysdef.h>
 
   PetscInt :: Ntheta, Nzeta, Nxi, Nperiods, helicity_l, matrixSize
-  PetscReal :: nu, epsilon_t, epsilon_h, iota, G, I
+  PetscReal :: nu, E, epsilon_t, epsilon_h, iota, G, I
   PetscOffset :: offset
   PetscInt :: myRank, numProcs
   PetscInt :: ithetaMin, ithetaMax, localNtheta
@@ -42,7 +42,7 @@ module variables
   PetscScalar, dimension(:,:), allocatable, target :: pitch_angle_scattering_operator_preconditioner
 
   PetscScalar, dimension(:,:), allocatable :: B, dBdtheta, dBdzeta
-  PetscReal :: VPrime
+  PetscReal :: VPrime, FSAB2
 
   PetscScalar, parameter :: pi = 3.14159265358979d+0
   PetscScalar, parameter :: sqrtpi = 1.77245385090552d+0

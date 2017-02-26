@@ -8,8 +8,8 @@
 subroutine apply_multigrid_cycle(preconditioner_context, input_vec, output_vec, ierr)
 
   use petscsys
-  use variables, only: levels, masterProc, N_levels, N_smoothing, one, ksp_on_coarsest_level, &
-       multigrid_restriction_matrices, multigrid_prolongation_matrices, Jacobi_omega, smoothing_option
+  use variables, only: levels, masterProc, N_levels, N_pre_smoothing, N_post_smoothing, one, ksp_on_coarsest_level, &
+       multigrid_restriction_matrices, multigrid_prolongation_matrices, Jacobi_omega, smoothing_option, defect_option
 
   implicit none
 
@@ -51,7 +51,7 @@ subroutine apply_multigrid_cycle(preconditioner_context, input_vec, output_vec, 
         ! Apply pre-smoothing. Note that since the initial guess is 0, then 1 iteration of smoothing is equivalent 
         ! to setting the solution vector to the smoother_shift.
         call VecCopy(levels(level)%smoother_shift, levels(level)%solution_vec, ierr)
-        do j_smoothing = 2,N_smoothing
+        do j_smoothing = 2,N_pre_smoothing
            ! temp_vec = Jacobi_iteration_matrix * solution_vec + smoother_shift
            call MatMultAdd(levels(level)%Jacobi_iteration_matrix, levels(level)%solution_vec, levels(level)%smoother_shift, levels(level)%temp_vec, ierr)
            call VecCopy(levels(level)%temp_vec, levels(level)%solution_vec, ierr)
@@ -64,7 +64,7 @@ subroutine apply_multigrid_cycle(preconditioner_context, input_vec, output_vec, 
         call VecCopy(levels(level)%rhs_vec, levels(level)%smoother_shift, ierr)
         call VecScale(levels(level)%smoother_shift, Jacobi_omega, ierr)
 
-        do j_smoothing = 1,N_smoothing
+        do j_smoothing = 1,N_pre_smoothing
            ! Form temp_vec = smoother_shift + smoothing_off_diagonal_matrix * solution_vec
            if (j_smoothing==1) then
               ! For first iteration, where the initial guess for the solution is 0, we can skip the matrix multiplication:
@@ -80,13 +80,32 @@ subroutine apply_multigrid_cycle(preconditioner_context, input_vec, output_vec, 
            end if
         end do
 
+     case (3)
+        call VecSet(levels(level)%solution_vec, 0.0d+0, ierr)
+        call KSPSolve(levels(level)%smoothing_ksp, levels(level)%rhs_vec, levels(level)%solution_vec, ierr)
+        call KSPGetConvergedReason(levels(level)%smoothing_ksp, reason, ierr)
+        if (reason <= 0) then
+           if (masterProc) print *,"KSP failed in post-smoothing! j_smoothing=",j_smoothing,", reason=",reason
+           stop
+        end if
+
      case default
         stop "Invalid smoothing_option in apply_multigrid_cycle 1"
      end select
 
      ! Construct the residual = rhs_vec - matrix * solution_vec
      call VecCopy(levels(level)%rhs_vec, levels(level)%residual_vec, ierr)
-     call MatMult(levels(level)%low_order_matrix, levels(level)%solution_vec, levels(level)%temp_vec, ierr)
+     select case (defect_option)
+     case (1)
+        if (masterProc) print *,"    Computing residual using the LOW order matrix."
+        call MatMult(levels(level)%low_order_matrix, levels(level)%solution_vec, levels(level)%temp_vec, ierr)
+     case (2,3,4)
+        if (masterProc) print *,"    Computing residual using the HIGH order matrix."
+        call MatMult(levels(level)%high_order_matrix, levels(level)%solution_vec, levels(level)%temp_vec, ierr)
+     case default
+        print *,"Invalid defect_option:",defect_option
+        stop
+     end select
      call VecAXPY(levels(level)%residual_vec, -one, levels(level)%temp_vec, ierr)
 
      ! Restrict residual to the next level:
@@ -111,13 +130,13 @@ subroutine apply_multigrid_cycle(preconditioner_context, input_vec, output_vec, 
      ! Apply post-smoothing
      select case (smoothing_option)
      case (1)
-        do j_smoothing = 1,N_smoothing
+        do j_smoothing = 1,N_post_smoothing
            ! temp_vec = Jacobi_iteration_matrix * solution_vec + smoother_shift
            call MatMultAdd(levels(level)%Jacobi_iteration_matrix, levels(level)%solution_vec, levels(level)%smoother_shift, levels(level)%temp_vec, ierr)
            call VecCopy(levels(level)%temp_vec, levels(level)%solution_vec, ierr)
         end do
      case (2)
-        do j_smoothing = 1,N_smoothing
+        do j_smoothing = 1,N_post_smoothing
            ! Form temp_vec = smoother_shift + smoothing_off_diagonal_matrix * solution_vec
            call MatMultAdd(levels(level)%smoothing_off_diagonal_matrix, levels(level)%solution_vec, levels(level)%smoother_shift, levels(level)%temp_vec, ierr)
            call KSPSolve(levels(level)%smoothing_ksp, levels(level)%temp_vec, levels(level)%solution_vec, ierr)
@@ -127,6 +146,13 @@ subroutine apply_multigrid_cycle(preconditioner_context, input_vec, output_vec, 
               stop
            end if
         end do
+     case (3)
+        call KSPSolve(levels(level)%smoothing_ksp, levels(level)%temp_vec, levels(level)%solution_vec, ierr) ! Could also use solution_vec as both arguments here I think.
+        call KSPGetConvergedReason(levels(level)%smoothing_ksp, reason, ierr)
+        if (reason <= 0) then
+           if (masterProc) print *,"KSP failed in post-smoothing! j_smoothing=",j_smoothing,", reason=",reason
+           stop
+        end if
      case default
         stop "Invalid smoothing_option in apply_multigrid_cycle 2"
      end select

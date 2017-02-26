@@ -22,8 +22,6 @@ program mmc
 
   PetscErrorCode ierr
   PetscBool :: wasSet
-  KSP :: ksp
-  PC :: preconditioner_context
   Vec :: rhs, solution
   PetscInt :: userContext ! Not used
   PetscInt :: VecLocalSize
@@ -77,8 +75,6 @@ program mmc
 
   smoothing_option = 1
   restriction_option = 1
-  N_pre_smoothing = 1
-  N_post_smoothing = 1
   coarsen_option = 1
   theta_diffusion = 0
   zeta_diffusion = 0
@@ -113,13 +109,10 @@ program mmc
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nxi_min', Nxi_min, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-smoothing_option', smoothing_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-restriction_option', restriction_option, wasSet, ierr)
-  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-N_pre_smoothing', N_pre_smoothing, wasSet, ierr)
-  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-N_post_smoothing', N_post_smoothing, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-coarsen_option', coarsen_option, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-zeta_diffusion', zeta_diffusion, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-theta_diffusion', theta_diffusion, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-defect_option', defect_option, wasSet, ierr)
-  call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-Jacobi_omega', Jacobi_omega, wasSet, ierr)
 
   ! Make sure Ntheta and Nzeta are odd:
   if (mod(Ntheta, 2) == 0) then
@@ -153,58 +146,53 @@ program mmc
      print *,"Nxi_min = ",Nxi_min
      print *,"smoothing_option = ",smoothing_option
      print *,"restriction_option = ",restriction_option
-     print *,"N_pre_smoothing = ",N_pre_smoothing
-     print *,"N_post_smoothing = ",N_post_smoothing
      print *,"theta_diffusion = ",theta_diffusion
      print *,"zeta_diffusion = ",zeta_diffusion
      print *,"defect_option = ",defect_option
-     print *,"Jacobi_omega = ",Jacobi_omega
   end if
 
   if (constraint_option<0 .or. constraint_option>2) stop "Invalid constraint_option"
 
-  call setup_multigrid()
+  call KSPCreate(PETSC_COMM_WORLD,main_ksp,ierr)
+  call KSPGetPC(main_ksp,preconditioner_context,ierr)
+  call PCSetType(preconditioner_context,PCMG,ierr)
 
-  call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
+  call setup_multigrid()
 
   call VecCreateMPI(PETSC_COMM_WORLD, PETSC_DECIDE, matrixSize, rhs, ierr)
   call VecDuplicate(rhs, solution, ierr)
 
   call populateRHS(rhs)
 
-  ! In the next line, the 3rd argument (the Mat object for the KSP preconditioner)
-  ! is not used for anything because we set a custom preconditioner.
-  call KSPSetOperators(ksp, levels(1)%high_order_matrix, levels(1)%high_order_matrix, ierr)
-
-  ! Create the object for the multigrid preconditioner:
-  call KSPGetPC(ksp,preconditioner_context,ierr)
-  call PCSetType(preconditioner_context,PCSHELL,ierr)
-  call PCShellSetApply(preconditioner_context,apply_multigrid_cycle,ierr)
+!!$  ! Create the object for the multigrid preconditioner:
+!!$  call KSPGetPC(ksp,preconditioner_context,ierr)
+!!$  call PCSetType(preconditioner_context,PCSHELL,ierr)
+!!$  call PCShellSetApply(preconditioner_context,apply_multigrid_cycle,ierr)
 
 
 !  call KSPSetComputeRHS(ksp,populateRHS,userContext,ierr)
 !  call KSPSetComputeOperators(ksp,populateMatrix,userContext,ierr)
 #if (PETSC_VERSION_MAJOR < 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR < 7))
-  call KSPMonitorSet(ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
+  call KSPMonitorSet(main_ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
 #else
   call PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, vf, ierr) 
   !call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
-  call KSPMonitorSet(ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
+  call KSPMonitorSet(main_ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
 #endif
-  call KSPSetFromOptions(ksp,ierr)
+  call KSPSetFromOptions(main_ksp,ierr)
   
   !call VecView(rhs, PETSC_VIEWER_STDOUT_WORLD, ierr)
   if (masterProc) then
      print *,"Beginning solve..."
   end if
-  call KSPSolve(ksp, rhs, solution, ierr)
+  call KSPSolve(main_ksp, rhs, solution, ierr)
   if (masterProc) then
      print *,"Done!"
   end if
 
   call diagnostics(solution)
 
-  call KSPDestroy(ksp,ierr)
+  call KSPDestroy(main_ksp,ierr)
 
   call PETScFinalize(ierr)
 
@@ -234,8 +222,6 @@ program mmc
   write (unit,*) Nxi_min
   write (unit,*) smoothing_option
   write (unit,*) restriction_option
-  write (unit,*) N_pre_smoothing
-  write (unit,*) N_post_smoothing
   write (unit,*) defect_option
   write (unit,*) flux
   write (unit,*) flow

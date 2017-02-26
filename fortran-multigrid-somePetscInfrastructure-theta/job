@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#./mmc -nu 0.001 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 2000 -options_left | tee output
+
+#./mmc -nu 0.001 -Ntheta 27 -Nzeta 29 -Nx 70 -ksp_gmres_restart 2000 -options_left \
+#    -defect_option 4 -N_post_smoothing 1 | tee output
+
+#./mmc -nu 0.0001 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 2000 -options_left \
+#    -defect_option 4 -N_post_smoothing 1 | tee output
+
+#./mmc -nu 1e-4 -Ntheta 50 -Nzeta 50 -Nxi 140 -ksp_gmres_restart 2000 -options_left \
+#    -defect_option 1 -N_post_smoothing 1 | tee output
+
+#./mmc -nu 0.001 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 2000 -ksp_type fgmres -ksp_max_it 100 -options_left -ksp_view \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -pitch_angle_scattering_option 2 \
+#    -smoothing_option 0 -constraint_option 1  \
+#    -defect_option 1 | tee output
+
+#./mmc -nu 0.001 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 2000 -ksp_type fgmres -ksp_max_it 500 -options_left -ksp_view \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
+#    -smoothing_option 0 -constraint_option 1 -pc_mg_type full -coarsen_theta 1 -coarsen_xi 1 \
+#    -defect_option 2 | tee output
+
+#./mmc -nu 0.00001 -Ntheta 59 -Nzeta 59 -Nxi 140 -ksp_gmres_restart 2000 -ksp_type fgmres -ksp_max_it 500 -options_left -ksp_view \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
+#    -smoothing_option 0 -constraint_option 1 -pc_mg_type full -coarsen_theta 1 -coarsen_xi 1 \
+#    -defect_option 1 | tee output
+
+./mmc -nu 0.00001 -Ntheta 59 -Nzeta 59 -Nxi 140 -ksp_gmres_restart 2000 -ksp_type fgmres -ksp_max_it 500 -options_left -ksp_view \
+    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -pitch_angle_scattering_option 2 \
+    -smoothing_option 0 -constraint_option 1 -pc_mg_type full -coarsen_theta 1 -coarsen_xi 1 \
+    -defect_option 1 | tee output
+
+#./mmc -ksp_gmres_restart 2000 -ksp_type fgmres -ksp_max_it 50 -options_left -ksp_view \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -pitch_angle_scattering_option 2 \
+#    -smoothing_option 3 -constraint_option 0 \
+#    -defect_option 1 | tee output
+
+

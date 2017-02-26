@@ -8,6 +8,7 @@
 subroutine setup_multigrid()
 
   use petscmat
+  use petscksp
   use variables
 
   implicit none
@@ -29,8 +30,23 @@ subroutine setup_multigrid()
 
   call computeB()
 
+  ! Always build the high-order matrix at the finest level:
+  call preallocateMatrix(levels(1)%high_order_matrix,1,1)
+  call populateMatrix(levels(1)%high_order_matrix,1,1)
+
+  if (defect_option==4) then
+     call preallocateMatrix(levels(N_levels)%mixed_order_matrix,10,N_levels)
+     call populateMatrix(levels(N_levels)%mixed_order_matrix,10,N_levels)
+  end if
+
   do j = 1,N_levels
     
+     if (defect_option > 1 .and. j>1) then
+        ! Build the high-order matrix at this level:
+        call preallocateMatrix(levels(j)%high_order_matrix,1,j)
+        call populateMatrix(levels(j)%high_order_matrix,1,j)
+     end if
+
      ! Build the low-order matrix at this level:
      call preallocateMatrix(levels(j)%low_order_matrix,0,j)
      call populateMatrix(levels(j)%low_order_matrix,0,j)
@@ -146,7 +162,25 @@ subroutine setup_multigrid()
         call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
         call MatView(levels(level)%smoothing_off_diagonal_matrix, viewer, ierr)
         call PetscViewerDestroy(viewer, ierr)
+     end do
 
+  case (3)
+     ! Same as PETSC's native multigrid: KSPRICHARDSON with PCSOR
+
+     do level = 1,N_levels-1  ! We don't need to smooth on the coarsest level, where we do a direct solve.
+
+        ! Make a matrix which is just like the low-order matrix, but without the sources and constraints:
+        call preallocateMatrix(levels(level)%smoothing_off_diagonal_matrix,4,level)
+        call populateMatrix(levels(level)%smoothing_off_diagonal_matrix,4,level)
+
+        call KSPCreate(PETSC_COMM_WORLD,levels(level)%smoothing_ksp,ierr)
+        call KSPSetOperators(levels(level)%smoothing_ksp, levels(level)%smoothing_off_diagonal_matrix, levels(level)%smoothing_off_diagonal_matrix, ierr)
+        call KSPGetPC(levels(level)%smoothing_ksp,preconditioner_context,ierr)
+        call PCSetType(preconditioner_context,PCSOR,ierr)
+        call KSPSetType(levels(level)%smoothing_ksp, KSPRICHARDSON, ierr)
+        call KSPSetTolerances(levels(level)%smoothing_ksp, PETSC_DEFAULT_REAL, PETSC_DEFAULT_REAL, PETSC_DEFAULT_REAL, 2, ierr) ! Is the correct number of iterations 2 or 1?
+        call KSPSetNormType(levels(level)%smoothing_ksp, KSP_NORM_NONE, ierr)
+        call KSPSetInitialGuessNonzero(levels(level)%smoothing_ksp, PETSC_TRUE, ierr)
      end do
   case default
      print *,"Invalid smoothing_option:",smoothing_option
@@ -159,7 +193,16 @@ subroutine setup_multigrid()
 
   ! Set up the direct solver for the coarsest level
   call KSPCreate(PETSC_COMM_WORLD,ksp_on_coarsest_level,ierr)
-  call KSPSetOperators(ksp_on_coarsest_level, levels(N_levels)%low_order_matrix, levels(N_levels)%low_order_matrix, ierr)
+  if (defect_option==2) then
+     if (masterProc) print *,"Using HIGH order matrix for the direct solve on the coarest level."
+     call KSPSetOperators(ksp_on_coarsest_level, levels(N_levels)%high_order_matrix, levels(N_levels)%high_order_matrix, ierr)
+  elseif (defect_option==4) then
+     if (masterProc) print *,"Using MIXED discretization matrix for the direct solve on the coarest level."
+     call KSPSetOperators(ksp_on_coarsest_level, levels(N_levels)%mixed_order_matrix, levels(N_levels)%mixed_order_matrix, ierr)
+  else
+     if (masterProc) print *,"Using LOW order matrix for the direct solve on the coarest level."
+     call KSPSetOperators(ksp_on_coarsest_level, levels(N_levels)%low_order_matrix, levels(N_levels)%low_order_matrix, ierr)
+  end if
   call KSPGetPC(ksp_on_coarsest_level,preconditioner_context,ierr)
   call PCSetType(preconditioner_context,PCLU,ierr)
   call KSPSetType(ksp_on_coarsest_level, KSPPREONLY, ierr)

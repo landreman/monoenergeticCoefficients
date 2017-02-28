@@ -59,12 +59,7 @@ program mmc
   preconditioner_theta_derivative_option = 4
   zeta_derivative_option = 8
   preconditioner_zeta_derivative_option = 4
-  xi_derivative_option = 8
-  preconditioner_xi_derivative_option = 4
-  pitch_angle_scattering_option = 3
-  preconditioner_pitch_angle_scattering_option = 2
 
-  xi_quadrature_option = 3
   constraint_option = 1
 
   coarsen_theta = PETSC_FALSE
@@ -96,11 +91,6 @@ program mmc
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_theta_derivative_option', preconditioner_theta_derivative_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-zeta_derivative_option', zeta_derivative_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_zeta_derivative_option', preconditioner_zeta_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-xi_derivative_option', xi_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_xi_derivative_option', preconditioner_xi_derivative_option, wasSet, ierr)
-  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-pitch_angle_scattering_option', pitch_angle_scattering_option, wasSet, ierr)
-  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_pitch_angle_scattering_option', preconditioner_pitch_angle_scattering_option, wasSet, ierr)
-  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-xi_quadrature_option', xi_quadrature_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-constraint_option', constraint_option, wasSet, ierr)
   call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-coarsen_theta', coarsen_theta, wasSet, ierr)
   call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-coarsen_zeta', coarsen_zeta, wasSet, ierr)
@@ -133,11 +123,6 @@ program mmc
      print *,"preconditioner_theta_derivative_option = ",preconditioner_theta_derivative_option
      print *,"zeta_derivative_option = ",zeta_derivative_option
      print *,"preconditioner_zeta_derivative_option = ",preconditioner_zeta_derivative_option
-     print *,"xi_derivative_option = ",xi_derivative_option
-     print *,"preconditioner_xi_derivative_option = ",preconditioner_xi_derivative_option
-     print *,"pitch_angle_scattering_option = ",pitch_angle_scattering_option
-     print *,"preconditioner_pitch_angle_scattering_option = ",preconditioner_pitch_angle_scattering_option
-     print *,"xi_quadrature_option = ",xi_quadrature_option
      print *,"constraint_option = ",constraint_option
      print *,"coarsen_theta = ",coarsen_theta
      print *,"coarsen_zeta = ",coarsen_zeta
@@ -214,11 +199,6 @@ program mmc
   write (unit,*) preconditioner_theta_derivative_option
   write (unit,*) zeta_derivative_option
   write (unit,*) preconditioner_zeta_derivative_option
-  write (unit,*) xi_derivative_option
-  write (unit,*) preconditioner_xi_derivative_option
-  write (unit,*) pitch_angle_scattering_option
-  write (unit,*) preconditioner_pitch_angle_scattering_option
-  write (unit,*) xi_quadrature_option
   write (unit,*) constraint_option
   write (unit,*) logical_to_int(coarsen_theta)
   write (unit,*) logical_to_int(coarsen_zeta)

@@ -12,12 +12,6 @@ subroutine computeB()
 
   implicit none
   
-!!#include <finclude/petscsys.h>
-!#include <finclude/petscsysdef.h>
-
-!  integer, intent(in) :: Ntheta, Nzeta
-!  PetscScalar, dimension(:), intent(in) :: theta, zeta
-!  PetscScalar, dimension(:,:), intent(out) :: B, dBdtheta, dBdzeta
   PetscScalar, dimension(:), pointer :: theta, zeta
   PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
 

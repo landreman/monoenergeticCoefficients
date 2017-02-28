@@ -28,9 +28,7 @@ module variables
 
   PetscInt :: theta_derivative_option, preconditioner_theta_derivative_option
   PetscInt :: zeta_derivative_option, preconditioner_zeta_derivative_option
-  PetscInt :: xi_derivative_option, preconditioner_xi_derivative_option
-  PetscInt :: pitch_angle_scattering_option, preconditioner_pitch_angle_scattering_option
-  PetscInt :: xi_quadrature_option, constraint_option
+  PetscInt :: constraint_option
 
   PetscBool :: coarsen_theta, coarsen_zeta, coarsen_xi
   PetscInt :: N_levels
@@ -42,26 +40,28 @@ module variables
   type :: multigrid_level
      PetscInt :: Ntheta, Nzeta, Nxi, matrixSize
 
-     PetscScalar, allocatable, dimension(:) :: theta, zeta, xi
-     PetscScalar, dimension(:), allocatable :: thetaWeights, zetaWeights, xiWeights
+     PetscScalar, allocatable, dimension(:) :: theta, zeta
+     PetscScalar, dimension(:), allocatable :: thetaWeights, zetaWeights
 
      PetscScalar, dimension(:,:), allocatable :: ddtheta_plus
      PetscScalar, dimension(:,:), allocatable :: ddtheta_minus
      PetscScalar, dimension(:,:), allocatable :: ddtheta_plus_preconditioner
      PetscScalar, dimension(:,:), allocatable :: ddtheta_minus_preconditioner
      
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_sum
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_difference
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_sum_preconditioner
+     PetscScalar, dimension(:,:), allocatable :: ddtheta_difference_preconditioner
+     
      PetscScalar, dimension(:,:), allocatable :: ddzeta_plus
      PetscScalar, dimension(:,:), allocatable :: ddzeta_minus
      PetscScalar, dimension(:,:), allocatable :: ddzeta_plus_preconditioner
      PetscScalar, dimension(:,:), allocatable :: ddzeta_minus_preconditioner
 
-     PetscScalar, dimension(:,:), allocatable :: ddxi_plus
-     PetscScalar, dimension(:,:), allocatable :: ddxi_minus
-     PetscScalar, dimension(:,:), allocatable :: ddxi_plus_preconditioner
-     PetscScalar, dimension(:,:), allocatable :: ddxi_minus_preconditioner
-
-     PetscScalar, dimension(:,:), allocatable :: pitch_angle_scattering_operator
-     PetscScalar, dimension(:,:), allocatable :: pitch_angle_scattering_operator_preconditioner
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_sum
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_difference
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_sum_preconditioner
+     PetscScalar, dimension(:,:), allocatable :: ddzeta_difference_preconditioner
 
      PetscScalar, dimension(:,:), allocatable :: B, dBdtheta, dBdzeta
 

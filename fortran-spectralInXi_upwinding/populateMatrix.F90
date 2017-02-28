@@ -79,7 +79,8 @@ subroutine populateMatrix(matrix, whichMatrix)
                          L_factor*factor*ddtheta_sum_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
                  end if
                  
-                 if (whichMatrix>0) then
+                 !if (whichMatrix>0) then
+                 if (.true.) then
                     ! Super-super-diagonal-in-L term
                     if (L < Nxi-2) then
                        ell = L + 2
@@ -179,7 +180,8 @@ subroutine populateMatrix(matrix, whichMatrix)
                          L_factor*factor*ddzeta_sum_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
                  end if
                  
-                 if (whichMatrix>0) then
+                 !if (whichMatrix>0) then
+                 if (.true.) then
                     ! Super-super-diagonal-in-L term
                     if (L < Nxi-2) then
                        ell = L + 2
@@ -251,7 +253,7 @@ subroutine populateMatrix(matrix, whichMatrix)
                       temp*(L+1)*(L+2)/(2*L+3), ADD_VALUES, ierr)
               end if
 
-              ! Super-diagonal term
+              ! Sub-diagonal term
               if (L > 0) then
                  ell = L - 1
                  colIndex = getIndex(itheta,izeta,ell+1)

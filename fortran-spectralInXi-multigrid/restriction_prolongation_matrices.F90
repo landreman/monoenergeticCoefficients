@@ -10,7 +10,7 @@ subroutine restriction_prolongation_matrices(fine_level)
   use petscmat
   use indices
   use variables, only: levels, multigrid_restriction_matrices, multigrid_prolongation_matrices, numProcs, one, constraint_option, &
-       restriction_option, pi, zetaMax, masterProc
+       restriction_option, pi, zetaMax, masterProc, coarsen_xi
 
   implicit none
 
@@ -19,10 +19,10 @@ subroutine restriction_prolongation_matrices(fine_level)
   integer :: Ntheta_fine, Ntheta_coarse
   integer :: Nzeta_fine, Nzeta_coarse
   integer :: Nxi_fine, Nxi_coarse
-  PetscScalar, allocatable, dimension(:,:) :: theta_prolongation, zeta_prolongation, xi_prolongation
+  PetscScalar, allocatable, dimension(:,:) :: theta_prolongation, zeta_prolongation
   integer :: itheta_fine, itheta_coarse
   integer :: izeta_fine, izeta_coarse
-  integer :: ixi_fine, ixi_coarse
+  integer :: ixi
   PetscScalar :: theta_value, zeta_value, xi_value
   PetscErrorCode :: ierr
   Vec :: row_sums
@@ -44,11 +44,9 @@ subroutine restriction_prolongation_matrices(fine_level)
   ! First, generate prolongation matrices for each of the coordinates individually:
   allocate(theta_prolongation(Ntheta_fine, Ntheta_coarse))
   allocate(zeta_prolongation(Nzeta_fine, Nzeta_coarse))
-  allocate(xi_prolongation(Nxi_fine, Nxi_coarse))
 
   call    periodic_interpolation(Ntheta_coarse, Ntheta_fine, 2*pi,                    levels(fine_level)%theta, theta_prolongation)
   call    periodic_interpolation( Nzeta_coarse,  Nzeta_fine, zetaMax,                 levels(fine_level)%zeta,   zeta_prolongation)
-  call nonperiodic_interpolation(   Nxi_coarse,    Nxi_fine, levels(coarse_level)%xi, levels(fine_level)%xi,       xi_prolongation)
 
   if (masterProc) then
      print *,"Here comes theta interpolation matrix:"
@@ -58,10 +56,6 @@ subroutine restriction_prolongation_matrices(fine_level)
      print *,"Here comes zeta interpolation matrix:"
      do j=1,Nzeta_fine
         print "(*(f6.2))",zeta_prolongation(j,:)
-     end do
-     print *,"Here comes xi interpolation matrix:"
-     do j=1,Nxi_fine
-        print "(*(f6.2))",xi_prolongation(j,:)
      end do
   end if
 
@@ -96,16 +90,11 @@ subroutine restriction_prolongation_matrices(fine_level)
            do izeta_fine = levels(fine_level)%izetaMin, levels(fine_level)%izetaMax
               zeta_value = zeta_prolongation(izeta_fine, izeta_coarse)
               if (abs(zeta_value)<1e-12) cycle
-              do ixi_coarse = 1,Nxi_coarse
-                 do ixi_fine = 1,Nxi_fine
-                    xi_value = xi_prolongation(ixi_fine, ixi_coarse)
-                    if (abs(xi_value)>1e-12) then
-                       call MatSetValue(multigrid_prolongation_matrices(fine_level), &
-                            getIndex(fine_level, itheta_fine, izeta_fine, ixi_fine), &
-                            getIndex(coarse_level, itheta_coarse, izeta_coarse, ixi_coarse), &
-                            theta_value*zeta_value*xi_value, ADD_VALUES, ierr)
-                    end if
-                 end do
+              do ixi = 1,Nxi_coarse
+                 call MatSetValue(multigrid_prolongation_matrices(fine_level), &
+                      getIndex(fine_level, itheta_fine, izeta_fine, ixi), &
+                      getIndex(coarse_level, itheta_coarse, izeta_coarse, ixi), &
+                      theta_value*zeta_value, ADD_VALUES, ierr)
               end do
            end do
         end do
@@ -124,9 +113,14 @@ subroutine restriction_prolongation_matrices(fine_level)
   call MatGetSize(multigrid_restriction_matrices(fine_level), num_rows, num_cols, ierr)
   select case (restriction_option)
   case (1)
+     if (coarsen_xi) then
+        print *,"Error! You should set restriction_option=2 when coarsen_xi=.true."
+        stop
+     end if
      call VecReciprocal(row_sums, ierr)
      call VecGetSize(row_sums, num_rows, ierr)
      call MatDiagonalScale(multigrid_restriction_matrices(fine_level), row_sums, PETSC_NULL_OBJECT, ierr)
+  case (2)
   case default
      print *,"Error! Invalid restriction_option:",restriction_option
      stop
@@ -134,7 +128,7 @@ subroutine restriction_prolongation_matrices(fine_level)
 
   ! Clean up.
   call VecDestroy(row_sums, ierr)
-  deallocate(theta_prolongation, zeta_prolongation, xi_prolongation)
+  deallocate(theta_prolongation, zeta_prolongation)
 
 !!$  ! For verifying the row sums of the prolongation matrix are 1:
 !!$  call MatCreateVecs(multigrid_prolongation_matrices(fine_level), PETSC_NULL_OBJECT, row_sums, ierr)

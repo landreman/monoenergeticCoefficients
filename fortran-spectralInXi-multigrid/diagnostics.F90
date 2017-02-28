@@ -21,9 +21,10 @@ subroutine diagnostics(solution)
   VecScatter :: VecScatterContext
   Vec :: solnOnProc0
   PetscViewer :: viewer
-  PetscInt :: itheta, izeta, ixi, index
+  PetscInt :: itheta, izeta, L, index
+  PetscScalar :: spatial_part
   PetscScalar, pointer :: solnArray(:)
-  PetscScalar, dimension(:), pointer :: xi, thetaWeights, zetaWeights, xiWeights
+  PetscScalar, dimension(:), pointer :: thetaWeights, zetaWeights
   PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
 
   if (masterProc) then
@@ -31,10 +32,8 @@ subroutine diagnostics(solution)
   end if
 
   ! For convenience, use some pointers to refer to quantities on the finest grid:
-  xi => levels(1)%xi
   thetaWeights => levels(1)%thetaWeights
   zetaWeights  => levels(1)%zetaWeights
-  xiWeights    => levels(1)%xiWeights
   B => levels(1)%B
   dBdtheta => levels(1)%dBdtheta
   dBdzeta => levels(1)%dBdzeta
@@ -53,18 +52,20 @@ subroutine diagnostics(solution)
 
      do itheta = 1,Ntheta
         do izeta = 1,Nzeta
-           do ixi = 1,Nxi
+           spatial_part = (G * dBdtheta(itheta,izeta) - I * dBdzeta(itheta,izeta))/(B(itheta,izeta) ** 3) &
+                * thetaWeights(itheta)*zetaWeights(izeta)
 
-              ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-              index = getIndex(1,itheta,izeta,ixi)+1
-
-              flux = flux + solnArray(index) * (1+xi(ixi)*xi(ixi)) &
-                   * (G * dBdtheta(itheta,izeta) - I * dBdzeta(itheta,izeta))/(B(itheta,izeta) ** 3) &
-                   * thetaWeights(itheta)*zetaWeights(izeta)*xiWeights(ixi)
-
-              flow = flow + solnArray(index) * xi(ixi) / B(itheta,izeta) &
-                   * thetaWeights(itheta)*zetaWeights(izeta)*xiWeights(ixi)
-           end do
+           L = 0
+           index = getIndex(1,itheta,izeta,L+1)+1 ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
+           flux = flux + solnArray(index) * spatial_part * 8/(3.0d+0)
+           
+           L = 2
+           index = getIndex(1,itheta,izeta,L+1)+1 ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
+           flux = flux + solnArray(index) * spatial_part * 4/(15.0d+0)
+           
+           L = 1
+           index = getIndex(1,itheta,izeta,L+1)+1 ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
+           flow = flow + solnArray(index) / B(itheta,izeta) * thetaWeights(itheta)*zetaWeights(izeta)
         end do
      end do
 
@@ -74,7 +75,7 @@ subroutine diagnostics(solution)
           
      call VecRestoreArrayF90(solnOnProc0, solnArray, ierr)
 
-     flow = flow * 2 / (sqrtpi*G*VPrime)
+     flow = flow * 4 / (3*sqrtpi*G*VPrime)
      flux = -2 / (sqrtpi*G*G*VPrime)*flux
      
      print *,"VPrime = ",VPrime,", FSAB2 = ",FSAB2

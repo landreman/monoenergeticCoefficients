@@ -34,7 +34,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   PetscInt :: ixi, ixiRow, ixiCol
   PetscInt :: rowIndex, colIndex, j, irow
   PetscScalar, dimension(:,:), pointer :: derivative_matrix_to_use, pitch_angle_scattering_operator_to_use
-  PetscScalar :: temp
+  PetscScalar :: temp, factor
   PetscInt, allocatable, dimension(:) :: row_indices, col_indices
   PetscScalar, allocatable, dimension(:,:) :: values
 
@@ -86,28 +86,29 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   izetaRow = -1
   izetaCol = -1
   do ixi = 1,Nxi
-     if (iota*xi(ixi)>0) then
-        if (whichMatrix == 1 .or. whichMatrix == 10) then
-           derivative_matrix_to_use => levels(level)%ddtheta_plus
-        else
-           derivative_matrix_to_use => levels(level)%ddtheta_plus_preconditioner
-        end if
-     else
-        if (whichMatrix == 1 .or. whichMatrix == 10) then
-           derivative_matrix_to_use => levels(level)%ddtheta_minus
-        else
-           derivative_matrix_to_use => levels(level)%ddtheta_minus_preconditioner
-        end if
-     end if
      do ithetaRow = ithetaMin,ithetaMax
         do izeta = izetaMin,izetaMax
+           factor = iota*B(ithetaRow,izeta)*xi(ixi) + E*iota*B(ithetaRow,izeta)*B(ithetaRow,izeta)/FSAB2
+           if (factor>0) then
+              if (whichMatrix == 1 .or. whichMatrix == 10) then
+                 derivative_matrix_to_use => levels(level)%ddtheta_plus
+              else
+                 derivative_matrix_to_use => levels(level)%ddtheta_plus_preconditioner
+              end if
+           else
+              if (whichMatrix == 1 .or. whichMatrix == 10) then
+                 derivative_matrix_to_use => levels(level)%ddtheta_minus
+              else
+                 derivative_matrix_to_use => levels(level)%ddtheta_minus_preconditioner
+              end if
+           end if
            rowIndex = getIndex(level,ithetaRow, izeta, ixi)
            do ithetaCol = 1,Ntheta
               if (whichMatrix==5 .and. ithetaCol .ne. ithetaRow) cycle ! For whichMatrix==5, add only the diagonal.
               if (whichMatrix==6 .and. ithetaCol == ithetaRow) cycle   ! For whichMatrix==6, add only the off-diagonal elements.
               colIndex = getIndex(level,ithetaCol, izeta, ixi)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                   iota*B(ithetaRow,izeta)*xi(ixi)*derivative_matrix_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                   factor*derivative_matrix_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
            end do
         end do
      end do
@@ -119,26 +120,27 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      ithetaRow = -1
      ithetaCol = -1
      do ixi = 1,Nxi
-        if (xi(ixi)>0) then
-           if (whichMatrix == 1) then
-              derivative_matrix_to_use => levels(level)%ddzeta_plus
-           else
-              derivative_matrix_to_use => levels(level)%ddzeta_plus_preconditioner
-           end if
-        else
-           if (whichMatrix == 1) then
-              derivative_matrix_to_use => levels(level)%ddzeta_minus
-           else
-              derivative_matrix_to_use => levels(level)%ddzeta_minus_preconditioner
-           end if
-        end if
         do izetaRow = izetaMin,izetaMax
            do itheta = ithetaMin,ithetaMax
+              factor = B(itheta,izetaRow)*xi(ixi) - E*iota*I*B(itheta,izetaRow)*B(itheta,izetaRow)/(G*FSAB2)
+              if (factor>0) then
+                 if (whichMatrix == 1) then
+                    derivative_matrix_to_use => levels(level)%ddzeta_plus
+                 else
+                    derivative_matrix_to_use => levels(level)%ddzeta_plus_preconditioner
+                 end if
+              else
+                 if (whichMatrix == 1) then
+                    derivative_matrix_to_use => levels(level)%ddzeta_minus
+                 else
+                    derivative_matrix_to_use => levels(level)%ddzeta_minus_preconditioner
+                 end if
+              end if
               rowIndex = getIndex(level,itheta, izetaRow, ixi)
               do izetaCol = 1,Nzeta
                  colIndex = getIndex(level,itheta, izetaCol, ixi)
                  call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                      B(itheta,izetaRow)*xi(ixi)*derivative_matrix_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+                      factor*derivative_matrix_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
               end do
            end do
         end do

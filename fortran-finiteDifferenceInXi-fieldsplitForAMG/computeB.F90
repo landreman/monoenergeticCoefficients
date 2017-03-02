@@ -5,24 +5,13 @@
 #include <petsc/finclude/petscsysdef.h>
 #endif
 
-!subroutine computeB(Ntheta, theta, Nzeta, zeta, B, dBdtheta, dBdzeta)
 subroutine computeB()
 
-  use variables, only: epsilon_t, epsilon_h, helicity_l, Nperiods, levels, N_levels, VPrime, FSAB2, geometry_option, G, I, iota, &
-       masterProc, pi
+  use variables
 
   implicit none
   
-!!#include <finclude/petscsys.h>
-!#include <finclude/petscsysdef.h>
-
-!  integer, intent(in) :: Ntheta, Nzeta
-!  PetscScalar, dimension(:), intent(in) :: theta, zeta
-!  PetscScalar, dimension(:,:), intent(out) :: B, dBdtheta, dBdzeta
-  PetscScalar, dimension(:), pointer :: theta, zeta
-  PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
-  PetscInt :: itheta, izeta, level, Ntheta, Nzeta
-
+  PetscInt :: itheta, izeta
   character(200) :: equilibrium_file = '/Users/mattland/sfincs/equilibria/w7x-sc1-ecb2.bc'
   PetscScalar :: normradius_wish = 0.9, normradius
   integer :: fileUnit, didFileAccessWork, no_of_modes_old, no_of_modes_new, j, modeind, NHarmonics, numB0s
@@ -44,6 +33,16 @@ subroutine computeB()
 
   select case (geometry_option)
   case (1)
+     do itheta = 1,Ntheta
+        do izeta = 1,Nzeta
+           
+           B(itheta,izeta) = 1 + epsilon_t * cos(theta(itheta)) + epsilon_h * cos(helicity_l*theta(itheta) - Nperiods*zeta(izeta))
+           
+           dBdtheta(itheta,izeta) = -epsilon_t * sin(theta(itheta)) - helicity_l * epsilon_h * sin(helicity_l*theta(itheta) - Nperiods*zeta(izeta))
+           
+           dBdzeta(itheta,izeta) = Nperiods * epsilon_h * sin(helicity_l*theta(itheta) - Nperiods*zeta(izeta))
+        end do
+     end do
   case (2)
 
        ! Read Boozer coordinate file in .bc format used at IPP Greifswald
@@ -222,86 +221,53 @@ subroutine computeB()
                " meters, equivalent to r/a = ",normradius
        end if
 
+
       G = GHat
       I = IHat
+
+      ! Initialize arrays:
+      B = B0OverBBar ! This includes the (0,0) component.
+      dBdtheta = 0
+      dBdzeta = 0
+
+      do j = 1, NHarmonics
+         do itheta = 1,Ntheta
+            B(itheta,:) = B(itheta,:) + B0OverBBar * BHarmonics_amplitudes(j) * &
+                 cos(BHarmonics_l(j) * theta(itheta) - NPeriods * BHarmonics_n(j) * zeta)
+            
+            dBdtheta(itheta,:) = dBdtheta(itheta,:) - B0OverBBar * BHarmonics_amplitudes(j) * BHarmonics_l(j) * &
+                 sin(BHarmonics_l(j) * theta(itheta) - NPeriods * BHarmonics_n(j) * zeta)
+            
+            dBdzeta(itheta,:) = dBdzeta(itheta,:) + B0OverBBar * BHarmonics_amplitudes(j) * Nperiods * BHarmonics_n(j) * &
+                 sin(BHarmonics_l(j) * theta(itheta) - NPeriods * BHarmonics_n(j) * zeta)
+            
+         end do
+      end do
 
   case default
      print *,"Invalid geometry_option:",geometry_option
      stop
   end select
 
-  do level = 1,N_levels
-     Ntheta = levels(level)%Ntheta
-     Nzeta = levels(level)%Nzeta
 
-     ! Allocate arrays for B and its derivatives     
-     allocate(levels(level)%B(Ntheta,Nzeta))
-     allocate(levels(level)%dBdtheta(Ntheta,Nzeta))
-     allocate(levels(level)%dBdzeta(Ntheta,Nzeta))
-
-
-     theta => levels(level)%theta
-     zeta => levels(level)%zeta
-     B => levels(level)%B
-     dBdtheta => levels(level)%dBdtheta
-     dBdzeta => levels(level)%dBdzeta
-
-     select case (geometry_option)
-     case (1)
-        do itheta = 1,Ntheta
-           do izeta = 1,Nzeta
-              
-              B(itheta,izeta) = 1 + epsilon_t * cos(theta(itheta)) + epsilon_h * cos(helicity_l*theta(itheta) - Nperiods*zeta(izeta))
-              
-              dBdtheta(itheta,izeta) = -epsilon_t * sin(theta(itheta)) - helicity_l * epsilon_h * sin(helicity_l*theta(itheta) - Nperiods*zeta(izeta))
-              
-              dBdzeta(itheta,izeta) = Nperiods * epsilon_h * sin(helicity_l*theta(itheta) - Nperiods*zeta(izeta))
-           end do
-        end do
-     case (2)
-        ! Initialize arrays:
-        B = B0OverBBar ! This includes the (0,0) component.
-        dBdtheta = 0
-        dBdzeta = 0
-        
-        do j = 1, NHarmonics
-           do itheta = 1,Ntheta
-              B(itheta,:) = B(itheta,:) + B0OverBBar * BHarmonics_amplitudes(j) * &
-                   cos(BHarmonics_l(j) * theta(itheta) - NPeriods * BHarmonics_n(j) * zeta)
-              
-              dBdtheta(itheta,:) = dBdtheta(itheta,:) - B0OverBBar * BHarmonics_amplitudes(j) * BHarmonics_l(j) * &
-                   sin(BHarmonics_l(j) * theta(itheta) - NPeriods * BHarmonics_n(j) * zeta)
-              
-              dBdzeta(itheta,:) = dBdzeta(itheta,:) + B0OverBBar * BHarmonics_amplitudes(j) * Nperiods * BHarmonics_n(j) * &
-                   sin(BHarmonics_l(j) * theta(itheta) - NPeriods * BHarmonics_n(j) * zeta)
-              
-           end do
-        end do
-
-     end select
-
-     if (level==1) then
-        VPrime = 0
-        do itheta = 1,Ntheta
-           do izeta = 1,Nzeta
-              VPrime = VPrime + levels(1)%thetaWeights(itheta) * levels(1)%zetaWeights(izeta) / (B(itheta,izeta) ** 2)
-           end do
-        end do
-        FSAB2 = sum(levels(1)%thetaWeights)*sum(levels(1)%zetaWeights)/VPrime
-
-        if (masterProc) then
-           print *,"Final iota:",iota
-           print *,"Final G:",G
-           print *,"Final I:",I
-           print *,"Final Nperiods:",Nperiods
-           print *,"zeta:",zeta
-           print *,"Here comes B:"
-           do itheta=1,Ntheta
-              print "(*(f5.2))",B(itheta,:)
-           end do
-        end if
-     end if
-
+  VPrime = 0
+  do itheta = 1,Ntheta
+     do izeta = 1,Nzeta
+        VPrime = VPrime + thetaWeights(itheta) * zetaWeights(izeta) / (B(itheta,izeta) ** 2)
+     end do
   end do
+  FSAB2 = sum(thetaWeights)*sum(zetaWeights)/VPrime
+  
+  if (masterProc) then
+     print *,"Final iota:",iota
+     print *,"Final G:",G
+     print *,"Final I:",I
+     print *,"Final Nperiods:",Nperiods
+     print *,"zeta:",zeta
+     print *,"Here comes B:"
+     do itheta=1,Ntheta
+        print "(*(f5.2))",B(itheta,:)
+     end do
+  end if
 
 end subroutine computeB

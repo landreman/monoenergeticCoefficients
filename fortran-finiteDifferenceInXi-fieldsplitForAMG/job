@@ -1,0 +1,620 @@
+#!/bin/bash
+
+# Direct solve:
+#./mmc -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -ksp_max_it 100 -ksp_gmres_restart 2000 -pc_type lu -pc_factor_mat_solver_package mumps -ksp_view | tee output
+
+# Direct solve with low order operators everywhere
+#./mmc -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_max_it 100 -ksp_gmres_restart 2000 -pc_type lu -pc_factor_mat_solver_package mumps -ksp_view | tee output
+
+# GAMG-AGG using low order operators everywhere.
+# KSP made no progress at all.
+#./mmc -constraint_option 2 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 -pc_type gamg  -ksp_view | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0
+# KSP made no progress at all.
+#./mmc -constraint_option 2 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0  -ksp_view | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson
+# Worked!!! Converged after 59 iterations.
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -mg_levels_ksp_type richardson
+# Converged after 78 iterations, though flux and flow were both a little bit off.
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.08
+# Converged after 28 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.08 | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2
+# Converged after 19 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 -pc_gamg_verbose 1 | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.4
+# Converged after 20 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.4 | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.6
+# Converged after 34 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.6 | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.9
+# Converged after 63 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.9 | tee output
+
+# GAMG-classical using low order operators everywhere.
+# KSP made no progress at all.
+#./mmc -constraint_option 2 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 -pc_type gamg \
+#    -pc_gamg_type classical -ksp_view  | tee output
+
+# GAMG-classical using low order operators everywhere, adding -mg_levels_ksp_type richardson
+# KSP converged, but flow was off.
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 -pc_type gamg \
+#    -pc_gamg_type classical -mg_levels_ksp_type richardson -ksp_view  | tee output
+
+
+# GAMG-classical using low order operators everywhere, adding -mg_levels_ksp_type richardson -ksp_norm_type unpreconditioned
+# KSP converged, but flow was off.
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 -pc_type gamg \
+#    -pc_gamg_type classical -mg_levels_ksp_type richardson -ksp_view -ksp_norm_type unpreconditioned | tee output
+
+
+
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.0001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 1000 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view | tee output
+
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2
+# Converged after 90 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res
+# Converged after 100 iterations
+#mpiexec -n 2 ./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 1000 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res
+# To parallelize, apparently I needed to add -mg_coarse_pc_factor_mat_solver_package mumps -pc_gamg_sym_graph true
+# Converged after 108 iterations
+#mpiexec -n 2 ./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 0.001 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 1000 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 -mg_coarse_pc_factor_mat_solver_package mumps -pc_gamg_sym_graph true| tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res, removed -mg_coarse_pc_type lu
+# Converged after 100 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 0.001 \
+#    -ksp_type fgmres  -ksp_max_it 1000 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res, removed -mg_coarse_pc_type lu
+# Removed -ksp_norm_type unpreconditioned
+# Converged after 100 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 0.001 \
+#    -ksp_type fgmres  -ksp_max_it 1000 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res, removed -mg_coarse_pc_type lu
+# Added -ksp_gmres_restart 20
+# Converged after 172 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 0.001 \
+#    -ksp_type fgmres  -ksp_max_it 1000 -ksp_gmres_restart 20 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res, removed -mg_coarse_pc_type lu
+# parallel
+# Converged after 108 iterations
+#mpiexec -n 2 ./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 0.001 \
+#    -ksp_type fgmres  -ksp_max_it 1000 -ksp_gmres_restart 1000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 -pc_gamg_sym_graph true | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res, removed -mg_coarse_pc_type lu
+# parallel
+# Converged after 108 iterations
+#mpiexec -n 2 ./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 0.001 \
+#    -ksp_type fgmres  -ksp_max_it 1000 -ksp_gmres_restart 1000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 -pc_gamg_sym_graph true | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res, removed -mg_coarse_pc_type lu
+# nu = 1e-4
+# Converged after 632 iterations
+#mpiexec -n 2 ./mmc -constraint_option 2 -ksp_rtol 1e-6 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 1e-4 \
+#    -ksp_type fgmres  -ksp_max_it 1000 -ksp_gmres_restart 100 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 -pc_gamg_sym_graph true | tee output
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, high res, removed -mg_coarse_pc_type lu
+# nu = 1e-4
+# Converged after 525 iterations
+#mpiexec -n 2 ./mmc -constraint_option 2 -ksp_rtol 1e-6 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 51 -Nzeta 201 -Nxi 200 -nu 1e-4 \
+#    -ksp_type fgmres  -ksp_max_it 1000 -ksp_gmres_restart 100 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 -pc_gamg_sym_graph true | tee output
+
+
+# GAMG-AGG with defect correction, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2 -nu 1e-4
+# Converged after 401 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7 \
+#    -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 1000 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# Direct solve using low order operators everywhere, nu 1e-5
+#./mmc -constraint_option 2 -ksp_rtol 1e-7  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-5 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type lu -pc_factor_mat_solver_package mumps \
+#    -ksp_norm_type unpreconditioned -ksp_view  | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, nu 1e-5
+# Converged after 22 iterations
+#./mmc -constraint_option 2 -ksp_rtol 1e-7  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-5 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2, nu 1e-5
+# Trying full multigrid instead of V cycle
+# Converged after 13 iterations !!
+#./mmc -constraint_option 2 -ksp_rtol 1e-7  -pc_mg_type full \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-5 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# GAMG-AGG using low order operators everywhere, adding -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type GMRES -pc_gamg_threshold 0.2, nu 1e-5
+# Converged after 20 iterations.
+#./mmc -constraint_option 2 -ksp_rtol 1e-7  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-5 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type gmres \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# low-order operators everywhere, direct solve
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -pc_type lu -pc_factor_mat_solver_package mumps -ksp_view | tee output
+
+# Hypre-boomerAMG, low-order operators everywhere
+# Converged in 23 iterations, but flow was slightly off.
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -ksp_view -help | tee output
+
+# Hypre-boomerAMG, low-order operators everywhere, W cycle
+# Converged in 52 iterations, but flux and flow were completely wrong:
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -pc_hypre_boomeramg_cycle_type W -ksp_view -help | tee output
+
+# Hypre-boomerAMG, low-order operators everywhere, W cycle
+# Converged in iterations, but flux and flow were completely wrong:
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -pc_hypre_boomeramg_cycle_type W -ksp_view -help | tee output
+
+# Hypre-boomerAMG, low-order operators everywhere, -pc_hypre_boomeramg_strong_threshold 0.9
+# Converged in 41 iterations, but flux and flow are all wrong
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -pc_hypre_boomeramg_strong_threshold 0.9 -pc_hypre_boomeramg_interp_type classical \
+#    -ksp_view -help  | tee output
+
+# Hypre-boomerAMG, low-order operators everywhere, -pc_hypre_boomeramg_strong_threshold 0.5
+# Converged in 38 iterations, but flux and flow are all wrong
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -pc_hypre_boomeramg_strong_threshold 0.5 -pc_hypre_boomeramg_interp_type classical \
+#    -ksp_view -help  | tee output
+
+# Hypre-boomerAMG, low-order operators everywhere, -pc_hypre_boomeramg_interp_type direct
+# Converged in 16 iterations!
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -pc_hypre_boomeramg_strong_threshold 0.25 -pc_hypre_boomeramg_interp_type direct \
+#    -ksp_view -help  | tee output
+
+# Hypre-boomerAMG, defect correction, -pc_hypre_boomeramg_interp_type direct
+# Converged in 68 iterations!
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics 1 \
+#    -pc_hypre_boomeramg_strong_threshold 0.25 -pc_hypre_boomeramg_interp_type direct \
+#    -ksp_view -help  | tee output
+
+# Hypre-boomerAMG, defect correction, -pc_hypre_boomeramg_interp_type direct, 4 procs
+# Converged in 71 iterations
+#mpiexec -n 4 ./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -pc_hypre_boomeramg_strong_threshold 0.25 -pc_hypre_boomeramg_interp_type direct \
+#    -ksp_view  | tee output
+
+# Hypre-boomerAMG, defect correction, -pc_hypre_boomeramg_interp_type direct, high res
+# Converged in 71 iterations
+#mpiexec -n 4 ./mmc -constraint_option 2 -ksp_rtol 1e-6  \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 1e-3 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics \
+#    -pc_hypre_boomeramg_strong_threshold 0.25 -pc_hypre_boomeramg_interp_type direct \
+#    -ksp_view -help  | tee output
+
+# Hakan's resolution challenge at nu 1e-7 !!!!!
+# Converged in 24 iterations in ~ 1 minute!!
+#mpiexec -n 4 ./mmc -constraint_option 2 -ksp_rtol 1e-6  -pc_mg_type full -pc_gamg_sym_graph 1 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 51 -Nzeta 201 -Nxi 200 -nu 1e-7 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_norm_type unpreconditioned -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# High nu - doesn't work well!
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  -pc_mg_type full -pc_gamg_sym_graph 1 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 30 -nu 10 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# The high nu case from above, this time with fieldsplit and gamg. It converges in ~50 iterations with
+# -pc_fieldsplit_type additive or multiplicative. But with -pc_fieldsplit_type symmetric_multiplicative it did not work.
+#./mmc -constraint_option 1 -ksp_rtol 1e-6  -pc_mg_type full -fieldsplit_0_pc_gamg_sym_graph 1 \
+#    -do_fieldsplit -pc_fieldsplit_type multiplicative \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 30 -nu 10 \
+#    -ksp_type fgmres -fieldsplit_0_mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_levels_ksp_type richardson \
+#    -ksp_view -fieldsplit_0_pc_gamg_threshold 0.2 | tee output
+
+# High nu, without -pc_mg_type full this time. Still doesn't work well!
+#./mmc -constraint_option 2 -ksp_rtol 1e-6 -pc_gamg_sym_graph 1 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 30 -nu 10 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 | tee output
+
+# Defect correction settings that are most likely to succeed: 168 iterations:
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  -pc_mg_type full -pc_gamg_sym_graph 1 \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 200 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -pc_gamg_threshold 0.2 | tee output
+
+# Slightly more efficient settings: 155 iterations:
+#./mmc -constraint_option 2 -ksp_rtol 1e-6  -pc_mg_type full -pc_gamg_sym_graph 1 \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 5 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 5 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 200 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -pc_gamg_threshold 0.2 | tee output
+
+# Defect correction, large E. GAMG by itself stalls, both with and without -pc_mg_type full.
+#./mmc -constraint_option 2  -pc_gamg_sym_graph 1 \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 -E 1 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 500 -ksp_gmres_restart 1000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -pc_gamg_threshold 0.2 | tee output
+
+# The same defect correction, large E case above that did not work with mg, this time with -pc_type lu.
+# Converged in 189 iterations.
+#./mmc -constraint_option 1  -pc_type lu -pc_factor_mat_solver_package mumps \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 -E 1 \
+#    -ksp_type fgmres  -ksp_max_it 500 -ksp_gmres_restart 1000 | tee output
+
+# Defect correction, large E. fieldsplit+gamg stalls for all 3 values of -pc_fieldsplit_type (additive, multiplicative, symmetric_multiplicative)
+#./mmc -constraint_option 1 -do_fieldsplit  -ksp_view \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 -E 1 \
+#    -ksp_type fgmres -ksp_max_it 500 -ksp_gmres_restart 1000 \
+#    -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+#    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2\
+#    | tee output
+
+# Defect correction, large E. fieldsplit+hypre
+#./mmc -constraint_option 1 -do_fieldsplit  -ksp_view \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 -E 1 \
+#    -ksp_type fgmres -ksp_max_it 500 -ksp_gmres_restart 1000 \
+#    -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type hypre -fieldsplit_0_pc_hypre_type boomeramg -fieldsplit_0_pc_hypre_boomeramg_interp_type direct\
+#    -fieldsplit_0_pc_hypre_boomeramg_print_statistics 1 -fieldsplit_0_pc_hypre_boomeramg_strong_threshold 0.25 \
+#    | tee output
+
+# Defect correction, hypre, nonzero E
+#./mmc -constraint_option 2 -ksp_rtol 1e-5 \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 1e-4 -E 0.0 \
+#    -ksp_type fgmres -ksp_max_it 500 -ksp_gmres_restart 1000 \
+#    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics 1 \
+#    -pc_hypre_boomeramg_strong_threshold 0.25 -pc_hypre_boomeramg_interp_type direct \
+#    | tee output
+
+# Base case with direct solver and no defect correction
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type lu -pc_factor_mat_solver_package mumps \
+#    | tee output
+
+# No defect correction, fieldsplit, applying mumps to main block:
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type additive -fieldsplit_0_pc_type lu -fieldsplit_0_pc_factor_mat_solver_package mumps \
+#    | tee output
+
+# No defect correction, fieldsplit, applying gamg to main block:
+# Converged in 15 iterations
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+#    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
+#    | tee output
+
+# No defect correction, fieldsplit, applying gamg to main block, fieldsplit symmetric_multiplicative:
+# Converged in 9 iterations!
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type symmetric_multiplicative \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+#    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
+#    | tee output
+
+# No defect correction, fieldsplit, applying gamg to main block, fieldsplit symmetric_multiplicative, high nu:
+# Converged in 16 iterations
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 10 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type symmetric_multiplicative \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+#    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
+#    | tee output
+
+#./mmc -options_left -ksp_view -constraint_option 2  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 10 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_coarse_pc_type lu \
+#    -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2 -pc_gamg_sym_graph 1\
+#    | tee output
+
+# Hakan's case with no defect correction, "direct" gamg
+# 39 iterations
+#./mmc -options_left -ksp_view -constraint_option 2  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 51 -Nzeta 201 -Nxi 200 -nu 1e-5 \
+#    -ksp_type fgmres -ksp_max_it 500 -ksp_gmres_restart 200 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -mg_coarse_pc_type lu -pc_gamg_threshold 0.2 -pc_gamg_sym_graph 1\
+#    | tee output
+
+# Same: Hakan's case with no defect correction, fieldsplit+ gamg, 
+# 19 iterations for -pc_fieldsplit_type symmetric_multiplicative
+# 32 iterations for -pc_fieldsplit_type multiplicative
+# 33 iterations for -pc_fieldsplit_type additive
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 -Ntheta 51 -Nzeta 201 -Nxi 200 -nu 1e-5 \
+#    -ksp_type fgmres -ksp_max_it 500 -ksp_gmres_restart 200 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+#    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
+#    | tee output
+
+
+# Defect correction, fieldsplit, applying gamg to main block:
+./mmc -options_left -ksp_view -constraint_option 1 -geometry_option 2 \
+    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+    -do_fieldsplit 1 -pc_fieldsplit_type additive \
+    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
+    | tee output

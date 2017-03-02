@@ -80,5 +80,6 @@ module variables
 
   PetscReal :: flux, flow
   PetscReal :: zeta_diffusion, theta_diffusion
+  integer :: clockStart, clockRate
 
 end module variables

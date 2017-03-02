@@ -82,5 +82,6 @@ module variables
   PetscReal :: zeta_diffusion, theta_diffusion
   integer :: clockStart, clockRate
   PetscScalar :: nonuniform_xi_a = 0.7, nonuniform_xi_b = 0.3 ! b=1-a
+  integer :: geometry_option
 
 end module variables

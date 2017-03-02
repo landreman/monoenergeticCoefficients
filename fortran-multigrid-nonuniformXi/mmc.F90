@@ -66,6 +66,7 @@ program mmc
 
   xi_quadrature_option = 3
   constraint_option = 1
+  geometry_option = 1
 
   coarsen_theta = PETSC_FALSE
   coarsen_zeta = PETSC_TRUE
@@ -76,7 +77,7 @@ program mmc
 
   smoothing_option = 1
   restriction_option = 1
-  coarsen_option = 1
+  coarsen_option = 4
   theta_diffusion = 0
   zeta_diffusion = 0
   defect_option = 1
@@ -117,6 +118,8 @@ program mmc
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-zeta_diffusion', zeta_diffusion, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-theta_diffusion', theta_diffusion, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-defect_option', defect_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-geometry_option', geometry_option, wasSet, ierr)
+  if (geometry_option==2) Nperiods=5
 
   ! Make sure Ntheta and Nzeta are odd:
   if (mod(Ntheta, 2) == 0) then
@@ -153,6 +156,8 @@ program mmc
      print *,"theta_diffusion = ",theta_diffusion
      print *,"zeta_diffusion = ",zeta_diffusion
      print *,"defect_option = ",defect_option
+     print *,"geometry_option = ",geometry_option
+     print *,"Nperiods = ",Nperiods
   end if
 
   if (constraint_option<0 .or. constraint_option>2) stop "Invalid constraint_option"
@@ -233,6 +238,7 @@ program mmc
   write (unit,*) smoothing_option
   write (unit,*) restriction_option
   write (unit,*) defect_option
+  write (unit,*) geometry_option
   write (unit,*) flux
   write (unit,*) flow
   close(unit)

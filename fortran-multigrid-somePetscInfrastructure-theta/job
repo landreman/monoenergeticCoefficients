@@ -68,12 +68,33 @@
 #    -smoothing_option 0 -constraint_option 1 -coarsen_theta 0 -coarsen_xi 0 \
 #    -defect_option 2 | tee output
 
+# Hakan's challenge resolution but higher nu, coarsen in zeta only.
+# 28 iterations, <3 min walltime, 1.4 GB memory
+#time ./mmc -nu 1e-3 -Ntheta 51 -Nzeta 201 -Nxi 200 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
+#    -smoothing_option 0 -constraint_option 1 -coarsen_theta 0 -coarsen_xi 0 \
+#    -defect_option 2 | tee output
+
+# Hakan's challenge resolution but higher nu, coarsen in theta and zeta.
+# 103 iterations, <3 min walltime, 57 MB memory
+#time ./mmc -nu 1e-3 -Ntheta 51 -Nzeta 201 -Nxi 200 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
+#    -smoothing_option 0 -constraint_option 1 -coarsen_theta 1 -coarsen_xi 0 \
+#    -defect_option 2 | tee output
+
+# Parameters that passed Hakan's challenge, coarsening in zeta and theta, 1 proc:
+# 756 iterations, 13 minutes walltime, 57 MB memory
+#time ./mmc -nu 1e-5 -Ntheta 51 -Nzeta 201 -Nxi 200 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
+#    -smoothing_option 0 -constraint_option 1 -coarsen_theta 1 -coarsen_xi 0 \
+#    -defect_option 2 | tee output
+
 # Parameters that passed Hakan's challenge, coarsening only in zeta, including Er:
 # 415 iterations, 11 minutes walltime, 1.5 GB memory
-time mpiexec -n 2 ./mmc -nu 1e-5 -Ntheta 51 -Nzeta 201 -Nxi 200 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
-    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
-    -smoothing_option 0 -constraint_option 1 -coarsen_theta 0 -coarsen_xi 0 -E 0.01\
-    -defect_option 2 | tee output
+#time mpiexec -n 2 ./mmc -nu 1e-5 -Ntheta 51 -Nzeta 201 -Nxi 200 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
+#    -smoothing_option 0 -constraint_option 1 -coarsen_theta 0 -coarsen_xi 0 -E 0.01\
+#    -defect_option 2 | tee output
 
 #./mmc -nu 1e-5 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
 #    -theta_derivative_option 4 -zeta_derivative_option 4 -xi_derivative_option 4 -pitch_angle_scattering_option 2 \
@@ -85,10 +106,10 @@ time mpiexec -n 2 ./mmc -nu 1e-5 -Ntheta 51 -Nzeta 201 -Nxi 200 -ksp_gmres_resta
 #    -smoothing_option 0 -constraint_option 1 -coarsen_theta 1 -coarsen_xi 1 -E -1.0e-2  \
 #    -defect_option 4 | tee output
 
-#./mmc -nu 1e-3 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
-#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
-#    -smoothing_option 0 -constraint_option 1 -coarsen_theta 1 -coarsen_xi 1 -E -1.0e-2  \
-#    -defect_option 4 | tee output
+./mmc -nu 1e-3 -Ntheta 27 -Nzeta 29 -Nxi 70 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
+    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \
+    -smoothing_option 0 -constraint_option 1 -coarsen_theta 1 -coarsen_xi 0 -E -1.0e-2  \
+    -defect_option 2 | tee output
 
 #./mmc -nu 1e-3 -Ntheta 51 -Nzeta 201 -Nxi 200 -ksp_gmres_restart 200 -ksp_type fgmres -ksp_max_it 2000 -options_left -ksp_view \
 #    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -pitch_angle_scattering_option 3 \

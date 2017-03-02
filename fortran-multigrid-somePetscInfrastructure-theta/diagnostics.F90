@@ -25,6 +25,10 @@ subroutine diagnostics(solution)
   PetscScalar, pointer :: solnArray(:)
   PetscScalar, dimension(:), pointer :: xi, thetaWeights, zetaWeights, xiWeights
   PetscScalar, dimension(:,:), pointer :: B, dBdtheta, dBdzeta
+  integer :: clockStop
+  real :: elapsedTime
+  character(len=6) :: filename="output"
+  integer :: fileUnit=11, didFileAccessWork
 
   if (masterProc) then
      print *,"Entering diagnostics"
@@ -77,15 +81,34 @@ subroutine diagnostics(solution)
      flow = flow * 2 / (sqrtpi*G*VPrime)
      flux = -2 / (sqrtpi*G*G*VPrime)*flux
      
+     call system_clock(clockStop)
+     elapsedTime = real(clockStop-clockStart)/clockRate
+
      print *,"VPrime = ",VPrime,", FSAB2 = ",FSAB2
      print *,"Results: flux = ",flux,", flow = ",flow
+     print *,"  Time for solve (seconds) = ",elapsedTime
+
+     open(unit=fileUnit, file=trim(filename), action="write", iostat = didFileAccessWork)
+     if (didFileAccessWork /= 0) then
+        print *,"Error opening ", trim(filename)
+        stop
+     else
+        write (unit=fileUnit,fmt="(a,i5)") "Ntheta = ", Ntheta
+        write (unit=fileUnit,fmt="(a,i5)") "Nzeta  = ", Nzeta
+        write (unit=fileUnit,fmt="(a,i5)") "Nxi    = ", Nxi
+        write (unit=fileUnit,fmt="(a,es22.15)") "nu = ", nu
+        write (unit=fileUnit,fmt="(a,i5)") "numProcs = ", numProcs
+        write (unit=fileUnit,fmt="(a,es22.15)") "Flux = ", flux
+        write (unit=fileUnit,fmt="(a,es22.15)") "Flow = ", flow
+        write (unit=fileUnit,fmt="(a,es22.15)") "Time = ", elapsedTime
+        close(unit=fileUnit)
+     end if
+
   end if
 
 
-
-
-  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mmc_soln.dat", FILE_MODE_WRITE, viewer, ierr)
-  call VecView(solution, viewer, ierr)
-  call PetscViewerDestroy(viewer, ierr)
+!!$  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, "mmc_soln.dat", FILE_MODE_WRITE, viewer, ierr)
+!!$  call VecView(solution, viewer, ierr)
+!!$  call PetscViewerDestroy(viewer, ierr)
 
 end subroutine diagnostics

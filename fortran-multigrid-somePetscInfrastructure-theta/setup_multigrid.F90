@@ -50,8 +50,15 @@ subroutine setup_multigrid()
      end if
 
      ! Build the low-order matrix at this level:
-     call preallocateMatrix(levels(j)%low_order_matrix,0,j)
-     call populateMatrix(levels(j)%low_order_matrix,0,j)
+     if (j==N_levels) then
+        ! DO include constraint and source at the coarse level, where we do a direct solve.
+        call preallocateMatrix(levels(j)%low_order_matrix,0,j)
+        call populateMatrix(levels(j)%low_order_matrix,0,j)
+     else
+        ! DON'T include constraint and source at finer levels, where we do smoothing.
+        call preallocateMatrix(levels(j)%low_order_matrix,4,j)
+        call populateMatrix(levels(j)%low_order_matrix,4,j)
+     end if
 
   end do
 
@@ -84,15 +91,16 @@ subroutine setup_multigrid()
   case (0)
      ! Try setting nothing except the KSP operators.
      do level = 1,N_levels-1  ! We don't need to smooth on the coarsest level, where we do a direct solve.
-        if (constraint_option==1) then
-           call preallocateMatrix(levels(level)%smoothing_matrix,4,level)
-           call populateMatrix(levels(level)%smoothing_matrix,4,level)
-        else
-           levels(level)%smoothing_matrix = levels(level)%low_order_matrix
-        end if
+!!$        if (constraint_option==1) then
+!!$           call preallocateMatrix(levels(level)%smoothing_matrix,4,level)
+!!$           call populateMatrix(levels(level)%smoothing_matrix,4,level)
+!!$        else
+!!$           levels(level)%smoothing_matrix = levels(level)%low_order_matrix
+!!$        end if
 
         call PCMGGetSmoother(preconditioner_context,N_levels-level,smoother_ksp,ierr)
-        call KSPSetOperators(smoother_ksp, levels(level)%smoothing_matrix, levels(level)%smoothing_matrix, ierr)
+        !call KSPSetOperators(smoother_ksp, levels(level)%smoothing_matrix, levels(level)%smoothing_matrix, ierr)
+        call KSPSetOperators(smoother_ksp, levels(level)%low_order_matrix, levels(level)%low_order_matrix, ierr)
         call KSPSetType(smoother_KSP, KSPRICHARDSON, ierr)
      end do
   case (1)

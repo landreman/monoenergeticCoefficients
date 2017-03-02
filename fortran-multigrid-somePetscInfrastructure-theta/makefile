@@ -9,7 +9,8 @@ TARGET = mmc
 
 OBJ_FILES = computeB.o create_grids.o diagnostics.o indices.o mmc.o \
 	nonperiodic_interpolation.o periodic_interpolation.o populateMatrix.o \
-	populateRHS.o preallocateMatrix.o restriction_prolongation_matrices.o setup_multigrid.o set_grid_resolutions.o \
+	populateRHS.o preallocateMatrix.o read_input.o \
+	restriction_prolongation_matrices.o setup_multigrid.o set_grid_resolutions.o \
 	sparsify.o uniformDiffMatrices.o variables.o
 
 .PHONY: all clean
@@ -43,6 +44,7 @@ periodic_interpolation.o:
 populateMatrix.o: indices.o sparsify.o variables.o
 populateRHS.o: indices.o variables.o
 preallocateMatrix.o: variables.o
+read_input.o: variables.o
 restriction_prolongation_matrices.o: variables.o indices.o
 setup_multigrid.o: variables.o
 set_grid_resolutions.o: variables.o

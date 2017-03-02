@@ -81,6 +81,9 @@ program mmc
   zeta_diffusion = 0
   defect_option = 1
 
+  call read_input()
+  ! Command-line arguments will override input.namelist
+  
 #if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
 #define new_argument PETSC_NULL_OBJECT,
 #else
@@ -186,6 +189,7 @@ program mmc
   if (masterProc) then
      print *,"Beginning solve..."
   end if
+  call system_clock(clockStart, clockRate)
   call KSPSolve(main_ksp, rhs, solution, ierr)
   if (masterProc) then
      print *,"Done!"

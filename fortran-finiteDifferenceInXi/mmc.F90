@@ -41,6 +41,7 @@ program mmc
 
   ! Set defaults:
   nu = 0.1d+0
+  E = 0
   epsilon_t = -0.07053d+0
   epsilon_h = 0.05067d+0
   iota = 0.4542d+0
@@ -64,7 +65,6 @@ program mmc
   xi_quadrature_option = 3
   constraint_option = 2
 
-  print *,"AAA"
 #if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
 #define new_argument PETSC_NULL_OBJECT,
 #else
@@ -72,10 +72,10 @@ program mmc
 #endif
 
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
-  print *,"BBB"
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nzeta', Nzeta, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-Nxi', Nxi, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-nu', nu, wasSet, ierr)
+  call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-E', E, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-theta_derivative_option', theta_derivative_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioner_theta_derivative_option', preconditioner_theta_derivative_option, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-zeta_derivative_option', zeta_derivative_option, wasSet, ierr)
@@ -92,6 +92,7 @@ program mmc
      print *,"Nzeta = ",Nzeta
      print *,"Nxi = ",Nxi
      print *,"nu = ",nu
+     print *,"E = ",E
      print *,"theta_derivative_option = ",theta_derivative_option
      print *,"preconditioner_theta_derivative_option = ",preconditioner_theta_derivative_option
      print *,"zeta_derivative_option = ",zeta_derivative_option
@@ -129,7 +130,8 @@ program mmc
   call KSPMonitorSet(ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
 #else
   call PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, vf, ierr) 
-  call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
+  !call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
+  call KSPMonitorSet(ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
 #endif
   call KSPSetFromOptions(ksp,ierr)
 

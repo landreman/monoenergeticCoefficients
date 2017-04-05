@@ -9,7 +9,7 @@ subroutine preallocateMatrix(matrix, whichMatrix)
 
   use petscmat
 
-  use variables, only: Nxi, Ntheta, Nzeta, matrixSize, numProcs, masterProc
+  use variables, only: Nxi, Ntheta, Nzeta, matrixSize, numProcs, masterProc, constraint_option
 
   implicit none
 
@@ -29,7 +29,7 @@ subroutine preallocateMatrix(matrix, whichMatrix)
   allocate(predictedNNZsForEachRow(matrixSize))
   allocate(predictedNNZsForEachRowDiagonal(matrixSize))
   ! Set tempInt1 to the expected number of nonzeros in a row of the kinetic equation block:
-  tempInt1 = 6 + (6-1) + (6-1)
+  tempInt1 = 6 + (6-1) + (6-1) + 1
   if (tempInt1 > matrixSize) then
      tempInt1 = matrixSize
   end if
@@ -38,7 +38,16 @@ subroutine preallocateMatrix(matrix, whichMatrix)
   predictedNNZsForEachRowDiagonal = predictedNNZsForEachRow
 
 
+  select case (constraint_option)
+  case (0,2)
+  case (1)
+     predictedNNZsForEachRow(matrixSize) = Ntheta*Nzeta*Nxi + 1  ! +1 for diagonal
+  case default
+     print *,"Invalid constraint_option:",constraint_option
+     stop
+  end select
 
+  predictedNNZsForEachRowDiagonal = predictedNNZsForEachRow
 
   ! 1 = New method with lower, more precise estimated number-of-nonzeros.
   ! This method is more complicated, but it should use much less memory.

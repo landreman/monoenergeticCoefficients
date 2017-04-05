@@ -1,0 +1,20 @@
+! Input file for fortran-spectralInXi-bcyclic monoenergetic code
+
+&inputs
+  Ntheta = 13
+!ss NthetaMinFactor = 0.7
+!ss NthetaMaxFactor = 2
+!ss NthetaNumRuns = 5
+
+  Nzeta = 17
+!ss NzetaMinFactor = 0.7
+!ss NzetaMaxFactor = 2
+!ss NzetaNumRuns = 4
+
+  Nxi = 16
+!ss NxiMinFactor = 0.7
+!ss NxiMaxFactor = 2
+!ss NxiNumRuns = 6
+
+  nu = 0.1d+0
+/

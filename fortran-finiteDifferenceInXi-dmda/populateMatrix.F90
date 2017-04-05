@@ -1,5 +1,5 @@
-#include <finclude/petscdmdadef.h>
-#include <finclude/petsckspdef.h>
+#include <petsc/finclude/petscdmdadef.h>
+#include <petsc/finclude/petsckspdef.h>
 
 subroutine populateMatrix(ksp, matrix, pcMatrix, userContext, ierr)
 

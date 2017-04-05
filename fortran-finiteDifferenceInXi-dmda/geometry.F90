@@ -3,7 +3,7 @@ module geometry
   implicit none
   
 !#include <finclude/petscsys.h>
-#include <finclude/petscsysdef.h>
+#include <petsc/finclude/petscsysdef.h>
   
   contains
 

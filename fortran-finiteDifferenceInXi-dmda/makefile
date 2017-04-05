@@ -1,4 +1,5 @@
-EXTRA_COMPILE_FLAGS =
+PETSC_DIR=/opt/local/lib/petsc
+EXTRA_COMPILE_FLAGS = -I${PETSC_DIR}/include -ffree-line-length-none
 EXTRA_LINK_FLAGS = 
 
 #FLINKER = ftn
@@ -11,8 +12,8 @@ OBJ_FILES = diagnostics.o geometry.o mmc.o populateMatrix.o populateRHS.o variab
 
 all: $(TARGET)
 
-include ${PETSC_DIR}/conf/variables
-include ${PETSC_DIR}/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
 
 $(TARGET): $(OBJ_FILES)
 	$(FLINKER) -o $(TARGET) $(OBJ_FILES) $(EXTRA_LINK_FLAGS) $(PETSC_LIB)
@@ -24,7 +25,7 @@ clean::
 	rm -f *.o *.mod *.a *.dat *~ $(TARGET)
 
 # Dependencies:
-diagnostics.o: variables.o
+diagnostics.o: variables.o geometry.o
 geometry.o: variables.o
 mmc.o: variables.o
 populateMatrix.o: geometry.o variables.o

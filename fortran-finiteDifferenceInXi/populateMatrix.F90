@@ -37,6 +37,7 @@ subroutine populateMatrix(matrix, whichMatrix)
   PetscScalar :: temp, factor
   PetscInt, allocatable, dimension(:) :: row_indices, col_indices
   PetscScalar, allocatable, dimension(:,:) :: values
+  Vec :: null_Vecs(1)
 
   if (masterProc) then
      print *,"Entering populateMatrix for whichMatrix = ",whichMatrix
@@ -172,11 +173,34 @@ subroutine populateMatrix(matrix, whichMatrix)
   call MatAssemblyBegin(matrix, MAT_FINAL_ASSEMBLY, ierr)
   call MatAssemblyEnd(matrix, MAT_FINAL_ASSEMBLY, ierr)
 
-  if (constraint_option==2) then
+  if (constraint_option==2 .or. constraint_option==3) then
      ! The matrix has a 1D null space, with the null vector corresponding to a constant:
      call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr)
      call MatSetNullSpace(matrix,nullspace,ierr)
      call MatNullSpaceDestroy(nullspace,ierr)
+     if (masterProc) print *,"Adding null space."
+  end if
+
+  if (constraint_option==3) then
+     call MatCreateVecs(matrix, PETSC_NULL_OBJECT, null_Vecs(1), ierr)
+     if (masterProc) then
+        print *,"Adding transpose null space."
+        do izeta = 1,Nzeta
+           do itheta = 1,Ntheta
+              do ixi = 1,Nxi
+                 call VecSetValue(null_Vecs(1), getIndex(itheta,izeta,ixi), (xiWeights(ixi)*thetaWeights(itheta)*zetaWeights(izeta))/(VPrime*B(itheta,izeta)*B(itheta,izeta)), INSERT_VALUES, ierr)
+              end do
+           end do
+        end do
+     end if
+     call VecAssemblyBegin(null_Vecs(1), ierr)
+     call VecAssemblyEnd(null_Vecs(1), ierr)
+     call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_FALSE,1,null_Vecs,nullspace,ierr)
+     call MatSetTransposeNullSpace(matrix,nullspace,ierr)
+     call MatNullSpaceDestroy(nullspace,ierr)
+     call VecDestroy(null_Vecs(1),ierr)
+
+     call MatView(matrix,PETSC_VIEWER_STDOUT_WORLD,ierr)
   end if
 
   write (filename,fmt="(a,i1,a)") "mmc_matrix_",whichMatrix,".dat"

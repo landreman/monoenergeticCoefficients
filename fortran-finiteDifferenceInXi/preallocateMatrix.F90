@@ -39,7 +39,7 @@ subroutine preallocateMatrix(matrix, whichMatrix)
 
 
   select case (constraint_option)
-  case (0,2)
+  case (0,2,3)
   case (1)
      predictedNNZsForEachRow(matrixSize) = Ntheta*Nzeta*Nxi + 1  ! +1 for diagonal
   case default

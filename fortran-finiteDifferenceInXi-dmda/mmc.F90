@@ -1,7 +1,7 @@
 ! Main program
 
-#include <finclude/petsckspdef.h>
-#include <finclude/petscdmdadef.h>
+#include <petsc/finclude/petsckspdef.h>
+#include <petsc/finclude/petscdmdadef.h>
 
 program mmc
 

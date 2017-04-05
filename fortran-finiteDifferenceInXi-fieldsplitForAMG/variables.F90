@@ -57,5 +57,7 @@ module variables
   PetscScalar :: nonuniform_xi_a = 0.7, nonuniform_xi_b = 0.3 ! b=1-a 
   integer :: geometry_option
   integer :: clockStart, clockRate
+  PetscScalar :: theta_upwinding_factor = 0.2
+  PetscScalar :: zeta_upwinding_factor = 0.0
 
 end module variables

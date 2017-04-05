@@ -504,6 +504,19 @@
 #    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2\
 #    | tee output
 
+# The case just above that stalls, but trying gmres smoothing instead of richardson
+#./mmc -constraint_option 1 -do_fieldsplit  -ksp_view \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-4 -E 1 \
+#    -ksp_type fgmres -ksp_max_it 300 -ksp_gmres_restart 1000 \
+#    -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+#    -fieldsplit_0_mg_levels_ksp_type gmres -fieldsplit_0_mg_levels_pc_type jacobi -fieldsplit_0_mg_levels_ksp_max_it 3 -fieldsplit_0_pc_gamg_threshold 0.2\
+#    | tee output
+
 # Defect correction, large E. fieldsplit+hypre
 #./mmc -constraint_option 1 -do_fieldsplit  -ksp_view \
 #    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
@@ -514,7 +527,7 @@
 #    -ksp_type fgmres -ksp_max_it 500 -ksp_gmres_restart 1000 \
 #    -pc_fieldsplit_type additive \
 #    -fieldsplit_0_pc_type hypre -fieldsplit_0_pc_hypre_type boomeramg -fieldsplit_0_pc_hypre_boomeramg_interp_type direct\
-#    -fieldsplit_0_pc_hypre_boomeramg_print_statistics 1 -fieldsplit_0_pc_hypre_boomeramg_strong_threshold 0.25 \
+#    -fieldsplit_0_pc_hypre_boomeramg_print_statistics 1 -fieldsplit_0_pc_hypre_boomeramg_strong_threshold 0.5 \
 #    | tee output
 
 # Defect correction, hypre, nonzero E
@@ -610,11 +623,75 @@
 
 
 # Defect correction, fieldsplit, applying gamg to main block:
-./mmc -options_left -ksp_view -constraint_option 1 -geometry_option 2 \
+#./mmc -options_left -ksp_view -constraint_option 1 -geometry_option 2 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
+#    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
+#    | tee output
+
+# Defect correction, fieldsplit, applying hypre to main block:
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 30 -nu 0.1 \
+#    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type additive  \
+#    -fieldsplit_0_pc_type hypre -fieldsplit_0_pc_hypre_type boomeramg -fieldsplit_0_pc_hypre_boomeramg_strong_threshold 0.25 \
+#    -pc_hypre_boomeramg_print_statistics 1 | tee stdout
+
+# 2017-03-20 Trying to understand why sfincs version4 is sensitive to constraintScheme, while this monoenergetic
+# code does not seem sensitive to constraint_option = 1 vs 2.
+
+# Defect correction, constraint_option=1, fieldsplit, applying gamg to main block:
+# with constraint_option=1 and do_fieldsplit=1: 
+# 70 KSP iterations with E=0
+# Stalls with E=0.1
+#./mmc -options_left -ksp_view -constraint_option 1 -do_fieldsplit 1 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -E 0.0\
+#    -ksp_type fgmres -ksp_max_it 300 -ksp_gmres_restart 2000 \
+#    -options_left -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0  \
+#    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
+#    | tee stdout
+# -fieldsplit_0_mg_coarse_pc_type lu
+
+# Defect correction, constraint_option=2, gamg:  
+# 64 KSP iterations with E=0
+# 78 KSP iterations with E=0.1
+#./mmc -options_left -ksp_view -constraint_option 2 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -E 0.1\
+#    -ksp_type fgmres -ksp_max_it 300 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0  \
+#    -mg_levels_ksp_type richardson -pc_gamg_threshold 0.2 \
+#    | tee stdout
+
+# Defect correction, constraint_option=1, fieldsplit, hypre:
+# 59 KSP iterations for E=0
+# 49 KSP iterations for E=0.1
+#./mmc -options_left -ksp_view -constraint_option 1  \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -E 0.1 \
+#    -ksp_type fgmres -ksp_max_it 300 -ksp_gmres_restart 2000 \
+#    -do_fieldsplit 1 -pc_fieldsplit_type additive  \
+#    -fieldsplit_0_pc_type hypre -fieldsplit_0_pc_hypre_type boomeramg  \
+#    -pc_hypre_boomeramg_print_statistics 1 | tee stdout
+
+# Defect correction, constraint_option=2, hypre:
+#  True residual not converging for E=0 or E=0.1
+#./mmc -options_left -ksp_view -constraint_option 2  \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -E 0 \
+#    -ksp_type fgmres -ksp_max_it 300 -ksp_gmres_restart 2000 \
+#    -pc_type hypre -pc_hypre_type boomeramg  \
+#    -pc_hypre_boomeramg_print_statistics 1 -log_summary | tee stdout
+
+# 20170331 
+./mmc -options_left -ksp_view -constraint_option 2  \
     -theta_derivative_option 8 -zeta_derivative_option 8 -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
-    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 \
-    -ksp_type fgmres -ksp_max_it 100 -ksp_gmres_restart 2000 \
-    -do_fieldsplit 1 -pc_fieldsplit_type additive \
-    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_coarse_pc_type lu \
-    -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_threshold 0.2 \
-    | tee output
+    -pitch_angle_scattering_option 3 -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -E 0 \
+    -ksp_type fgmres -ksp_max_it 300 -ksp_gmres_restart 2000 \
+    -pc_type hypre -pc_hypre_boomeramg_print_statistics 1  | tee stdout

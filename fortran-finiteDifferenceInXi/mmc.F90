@@ -105,7 +105,7 @@ program mmc
      print *,"constraint_option = ",constraint_option
   end if
 
-  if (constraint_option<0 .or. constraint_option>2) stop "Invalid constraint_option"
+  if (constraint_option<0 .or. constraint_option>3) stop "Invalid constraint_option"
 
   call createGrids()
 

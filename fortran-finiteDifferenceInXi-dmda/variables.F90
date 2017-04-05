@@ -4,7 +4,7 @@ module variables
   implicit none
 
 !#include <finclude/petscsys.h>
-#include <finclude/petscsysdef.h>
+#include <petsc/finclude/petscsysdef.h>
 
   PetscInt :: Ntheta, Nzeta, Nxi, Nperiods, helicity_l
   PetscReal :: nu, epsilon_t, epsilon_h, iota, G, I

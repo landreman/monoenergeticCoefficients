@@ -60,7 +60,7 @@ program mmc
   Nzeta = 15
   Nxi = 16
 
-  theta_derivative_option = 8
+  theta_derivative_option = 10
   preconditioner_theta_derivative_option = 4
   zeta_derivative_option = 8
   preconditioner_zeta_derivative_option = 4
@@ -68,6 +68,8 @@ program mmc
   preconditioner_xi_derivative_option = 2
   pitch_angle_scattering_option = 3
   preconditioner_pitch_angle_scattering_option = 2
+  theta_upwinding_factor = 0.2
+  zeta_upwinding_factor = 0.0
 
   xi_quadrature_option = 3
   constraint_option = 1
@@ -180,6 +182,7 @@ program mmc
      print *,"Does sub_Amat==sub_Pmat?",sub_Amat==sub_Pmat
      call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr)
      call MatSetNullSpace(sub_Pmat,nullspace,ierr)
+     !call KSPSetNullSpace(sub_ksps(1),nullspace,ierr)
      call MatNullSpaceDestroy(nullspace,ierr)
   end if
 

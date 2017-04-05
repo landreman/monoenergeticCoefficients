@@ -426,6 +426,16 @@
 #    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
 #    -ksp_view -pc_gamg_threshold 0.2 | tee output
 
+# High nu, without -pc_mg_type full this time. Still doesn't work well!
+#./mmc -constraint_option 2 -ksp_rtol 1e-6 -pc_gamg_sym_graph 1 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 30 -nu 10 \
+#    -ksp_type fgmres -mg_coarse_pc_type lu -ksp_max_it 100 -ksp_gmres_restart 2000 \
+#    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson \
+#    -ksp_view -pc_gamg_threshold 0.2 | tee output
+
 # Defect correction settings that are most likely to succeed: 168 iterations:
 #./mmc -constraint_option 2 -ksp_rtol 1e-6  -pc_mg_type full -pc_gamg_sym_graph 1 \
 #    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
@@ -460,14 +470,13 @@
 #    -pc_gamg_threshold 0.2 | tee output
 
 # Defect correction, hypre, nonzero E
-./mmc -constraint_option 2 -ksp_rtol 1e-5 \
+./mmc -ksp_rtol 1e-5 -ksp_view -constraint_option 3  \
     -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
     -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
     -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
     -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
-    -options_left -Ntheta 59 -Nzeta 59 -Nxi 140 -nu 1e-4 -E 0.0 \
-    -ksp_type fgmres -ksp_max_it 500 -ksp_gmres_restart 1000 \
-    -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_print_statistics 1 \
-    -pc_hypre_boomeramg_strong_threshold 0.25 -pc_hypre_boomeramg_interp_type direct \
+    -options_left -Ntheta 29 -Nzeta 29 -Nxi 70 -nu 1e-3 -E 0.0 \
+    -ksp_type fgmres -ksp_max_it 200 -ksp_gmres_restart 1000 \
+    -pc_type hypre -pc_hypre_boomeramg_print_statistics 1 \
     | tee output
 

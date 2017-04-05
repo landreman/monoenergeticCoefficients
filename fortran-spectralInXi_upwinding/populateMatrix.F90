@@ -303,7 +303,7 @@ subroutine populateMatrix(matrix, whichMatrix)
   call MatAssemblyBegin(matrix, MAT_FINAL_ASSEMBLY, ierr)
   call MatAssemblyEnd(matrix, MAT_FINAL_ASSEMBLY, ierr)
 
-  if (constraint_option==2) then
+  if (constraint_option==2 .or. constraint_option==3 .or. constraint_option==4) then
      ! The matrix has a 1D null space, with the null vector corresponding to a constant in the L=0 component:
      call VecCreateMPI(PETSC_COMM_WORLD, PETSC_DECIDE, matrixSize, null_vec(1), ierr)
      call VecSet(null_vec(1), zero, ierr)
@@ -320,7 +320,8 @@ subroutine populateMatrix(matrix, whichMatrix)
 
      call MatNullSpaceCreate(MPI_COMM_WORLD,PETSC_FALSE,1,null_vec,nullspace, ierr)
 !!$  call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr) ! This line creates a constant null space including all xi
-     call MatSetNullSpace(matrix,nullspace,ierr)
+     if (constraint_option==2 .or. constraint_option==4) call MatSetNullSpace(matrix,nullspace,ierr)
+     if (constraint_option==3 .or. constraint_option==4) call MatSetNearNullSpace(matrix,nullspace,ierr)
      call MatNullSpaceDestroy(nullspace,ierr)
   end if
 

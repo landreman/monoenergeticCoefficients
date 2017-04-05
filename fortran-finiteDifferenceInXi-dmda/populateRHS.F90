@@ -1,6 +1,6 @@
-#include <finclude/petsckspdef.h>
+#include <petsc/finclude/petsckspdef.h>
 !#include <finclude/petscdm.h>
-#include <finclude/petscdmdadef.h>
+#include <petsc/finclude/petscdmdadef.h>
 !#include <finclude/petscdmda.h90>
 
 subroutine populateRHS(ksp, vec, userContext, ierr)

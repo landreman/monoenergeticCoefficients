@@ -80,5 +80,11 @@ module variables
 
   PetscReal :: flux, flow
   PetscReal :: zeta_diffusion, theta_diffusion
+  logical :: shift_L0_in_smoother
+
+  integer :: f_scaling_option
+  integer :: L_scaling_option
+  PetscScalar, dimension(:), allocatable :: f_scaling, L_scaling
+  PetscScalar :: omega, upwinding_scale_factor, preconditioner_upwinding_scale_factor
 
 end module variables

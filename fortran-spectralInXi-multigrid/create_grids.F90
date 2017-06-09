@@ -20,7 +20,7 @@
     PetscScalar, dimension(:,:), allocatable :: d2dtheta2
     PetscScalar, dimension(:,:), allocatable :: d2dzeta2, temp_matrix
     PetscInt :: scheme, quadrature_option, derivative_option_plus, derivative_option_minus, derivative_option
-    PetscInt :: j, k, itheta, izeta
+    PetscInt :: j, k, itheta, izeta, L
     PetscInt :: localNtheta, localNzeta
     DM :: myDM
     integer, parameter :: bufferLength = 200
@@ -639,7 +639,39 @@
     ! The following arrays will not be needed:
     deallocate(d2dzeta2)
 
-
+    if (level==1) then
+       ! f(theta,zeta,xi) = sum_ell f_ell(theta,zeta) * f_scaling(ell) * P_ell(xi)
+       allocate(f_scaling(Nxi))
+       select case (f_scaling_option)
+       case (1)
+          f_scaling = 1
+       case (2)
+          do L=0,Nxi-1
+             f_scaling(L+1) = sqrt((2*L+1.0d+0)/2)
+          end do
+       case default
+          print *,"Error! Invalid f_scaling_option:",f_scaling_option
+          stop
+       end select
+       
+       ! The DKE is discretized by operating by int dxi P_L(xi) L_scaling(L) (...)
+       allocate(L_scaling(Nxi))
+       select case (L_scaling_option)
+       case (1)
+          L_scaling = 1
+       case (2)
+          do L=0,Nxi-1
+             L_scaling(L+1) = sqrt(2/(2*L+1.0d+0))
+          end do
+       case (3)
+          do L=0,Nxi-1
+             L_scaling(L+1) = 2/(2*L+1.0d+0)
+          end do
+       case default
+          print *,"Error! Invalid L_scaling_option:",L_scaling_option
+          stop
+       end select
+    end if
 
   end subroutine create_grids
 

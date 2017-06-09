@@ -57,15 +57,15 @@ subroutine diagnostics(solution)
 
            L = 0
            index = getIndex(1,itheta,izeta,L+1)+1 ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-           flux = flux + solnArray(index) * spatial_part * 8/(3.0d+0)
+           flux = flux + solnArray(index) * spatial_part * 8/(3.0d+0) * f_scaling(L+1)
            
            L = 2
            index = getIndex(1,itheta,izeta,L+1)+1 ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-           flux = flux + solnArray(index) * spatial_part * 4/(15.0d+0)
+           flux = flux + solnArray(index) * spatial_part * 4/(15.0d+0) * f_scaling(L+1)
            
            L = 1
            index = getIndex(1,itheta,izeta,L+1)+1 ! We add 1 here to convert from petsc 0-based indices to fortran 1-based indices:
-           flow = flow + solnArray(index) / B(itheta,izeta) * thetaWeights(itheta)*zetaWeights(izeta)
+           flow = flow + solnArray(index) / B(itheta,izeta) * thetaWeights(itheta)*zetaWeights(izeta) * f_scaling(L+1)
         end do
      end do
 

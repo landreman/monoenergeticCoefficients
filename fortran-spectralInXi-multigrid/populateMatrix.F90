@@ -34,7 +34,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   PetscInt :: L, ell
   PetscInt :: rowIndex, colIndex, j, irow, index
   PetscScalar, dimension(:,:), pointer :: derivative_matrix_to_use
-  PetscScalar :: temp, factor, L_factor
+  PetscScalar :: temp, factor, L_factor, upwinding_scale_factor_to_use
 
   ! For convenience, use some short variable names to refer to quantities on this level:
   integer :: Ntheta, Nzeta, Nxi, matrixSize
@@ -80,17 +80,16 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   end if
 
   ! Add d/dtheta parallel streaming term
+  if (whichMatrix == 1) then
+     ddtheta_sum_to_use => levels(level)%ddtheta_sum
+     ddtheta_difference_to_use => levels(level)%ddtheta_difference
+     upwinding_scale_factor_to_use = upwinding_scale_factor
+  else
+     ddtheta_sum_to_use => levels(level)%ddtheta_sum_preconditioner
+     ddtheta_difference_to_use => levels(level)%ddtheta_difference_preconditioner
+     upwinding_scale_factor_to_use = preconditioner_upwinding_scale_factor
+  end if
   do L=0,(Nxi-1)
-
-     if (whichMatrix == 1) then
-        ddtheta_sum_to_use => levels(level)%ddtheta_sum
-        ddtheta_difference_to_use => levels(level)%ddtheta_difference
-     else
-        ddtheta_sum_to_use => levels(level)%ddtheta_sum_preconditioner
-        ddtheta_difference_to_use => levels(level)%ddtheta_difference_preconditioner
-     end if
-     if (iota < 0) ddtheta_difference_to_use = -ddtheta_difference_to_use
-     
      do ithetaRow = ithetaMin,ithetaMax
         do izeta = izetaMin,izetaMax
            factor = iota * B(ithetaRow,izeta)
@@ -99,47 +98,54 @@ subroutine populateMatrix(matrix, whichMatrix, level)
               
               ! Diagonal-in-L term:
               ell = L
-              L_factor = (2*L*L+2*L-one)/((2*L+3)*(2*L-one))
+              L_factor = (2*L*L+2*L-one)/((2*L+3)*(2*L-one)) * L_scaling(L+1) * f_scaling(ell+1)
               colIndex = getIndex(level, ithetaCol, izeta, ell+1)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                   L_factor*factor*ddtheta_difference_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                   upwinding_scale_factor_to_use*L_factor*abs(factor)*ddtheta_difference_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+              ! Need the abs() around factor for the ddtheta_difference terms to handle the case iota<0.
+
+              !if (whichMatrix .ne. 4) then
+              if (.true.) then
+                 ! Super-diagonal-in-L term
+                 if (L < Nxi-1) then
+                    ell = L + 1
+                    L_factor = (L+1)/(two*L+3) * L_scaling(L+1) * f_scaling(ell+1)
+                    colIndex = getIndex(level, ithetaCol, izeta, ell+1)
+                    call MatSetValueSparse(matrix, rowIndex, colIndex, &
+                         L_factor*factor*ddtheta_sum_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                 end if
               
-              ! Super-diagonal-in-L term
-              if (L < Nxi-1) then
-                 ell = L + 1
-                 L_factor = (L+1)/(two*L+3)
-                 colIndex = getIndex(level, ithetaCol, izeta, ell+1)
-                 call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                      L_factor*factor*ddtheta_sum_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                 ! Sub-diagonal-in-L term
+                 if (L > 0) then
+                    ell = L - 1
+                    L_factor = L/(2*L-one) * L_scaling(L+1) * f_scaling(ell+1)
+                    colIndex = getIndex(level, ithetaCol, izeta, ell+1)
+                    call MatSetValueSparse(matrix, rowIndex, colIndex, &
+                         L_factor*factor*ddtheta_sum_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                 end if
               end if
               
-              ! Sub-diagonal-in-L term
-              if (L > 0) then
-                 ell = L - 1
-                 L_factor = L/(2*L-one)
-                 colIndex = getIndex(level, ithetaCol, izeta, ell+1)
-                 call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                      L_factor*factor*ddtheta_sum_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
-              end if
-              
+              !if (whichMatrix .ne. 4) then
               !if (whichMatrix>0) then
               if (.true.) then
                  ! Super-super-diagonal-in-L term
                  if (L < Nxi-2) then
                     ell = L + 2
-                    L_factor = (L+two)*(L+one)/((two*L+5)*(two*L+3))
+                    L_factor = (L+two)*(L+one)/((two*L+5)*(two*L+3)) * L_scaling(L+1) * f_scaling(ell+1)
                     colIndex = getIndex(level, ithetaCol, izeta, ell+1)
                     call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                         L_factor*factor*ddtheta_difference_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                         upwinding_scale_factor_to_use*L_factor*abs(factor)*ddtheta_difference_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                    ! Need the abs() around factor for the ddtheta_difference terms to handle the case iota<0.
                  end if
                  
                  ! Sub-sub-diagonal-in-L term
                  if (L > 1) then
                     ell = L - 2
-                    L_factor = (L-one)*L/((two*L-3)*(two*L-one))
+                    L_factor = (L-one)*L/((two*L-3)*(two*L-one)) * L_scaling(L+1) * f_scaling(ell+1)
                     colIndex = getIndex(level, ithetaCol, izeta, ell+1)
                     call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                         L_factor*factor*ddtheta_difference_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                         upwinding_scale_factor_to_use*L_factor*abs(factor)*ddtheta_difference_to_use(ithetaRow,ithetaCol), ADD_VALUES, ierr)
+                    ! Need the abs() around factor for the ddtheta_difference terms to handle the case iota<0.
                  end if
               end if
            end do
@@ -182,16 +188,14 @@ subroutine populateMatrix(matrix, whichMatrix, level)
   
   
   ! Add d/dzeta parallel streaming term
-  do L=0,(Nxi-1)
-     
-     if (whichMatrix == 1) then
-        ddzeta_sum_to_use => levels(level)%ddzeta_sum
-        ddzeta_difference_to_use => levels(level)%ddzeta_difference
-     else
-        ddzeta_sum_to_use => levels(level)%ddzeta_sum_preconditioner
-        ddzeta_difference_to_use => levels(level)%ddzeta_difference_preconditioner
-     end if
-     
+  if (whichMatrix == 1) then
+     ddzeta_sum_to_use => levels(level)%ddzeta_sum
+     ddzeta_difference_to_use => levels(level)%ddzeta_difference
+  else
+     ddzeta_sum_to_use => levels(level)%ddzeta_sum_preconditioner
+     ddzeta_difference_to_use => levels(level)%ddzeta_difference_preconditioner
+  end if
+  do L=0,(Nxi-1)     
      do izetaRow = izetaMin,izetaMax
         do itheta = ithetaMin,ithetaMax
            factor = B(itheta,izetaRow)
@@ -200,47 +204,51 @@ subroutine populateMatrix(matrix, whichMatrix, level)
               
               ! Diagonal-in-L term:
               ell = L
-              L_factor = (2*L*L+2*L-one)/((2*L+3)*(2*L-one))
+              L_factor = (2*L*L+2*L-one)/((2*L+3)*(2*L-one)) * L_scaling(L+1) * f_scaling(ell+1)
               colIndex = getIndex(level, itheta, izetaCol, ell+1)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                   L_factor*factor*ddzeta_difference_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+                   upwinding_scale_factor_to_use*L_factor*factor*ddzeta_difference_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
               
-              ! Super-diagonal-in-L term
-              if (L < Nxi-1) then
-                 ell = L + 1
-                 L_factor = (L+1)/(two*L+3)
-                 colIndex = getIndex(level, itheta, izetaCol, ell+1)
-                 call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                      L_factor*factor*ddzeta_sum_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+              !if (whichMatrix .ne. 4) then
+              if (.true.) then
+                 ! Super-diagonal-in-L term
+                 if (L < Nxi-1) then
+                    ell = L + 1
+                    L_factor = (L+1)/(two*L+3) * L_scaling(L+1) * f_scaling(ell+1)
+                    colIndex = getIndex(level, itheta, izetaCol, ell+1)
+                    call MatSetValueSparse(matrix, rowIndex, colIndex, &
+                         L_factor*factor*ddzeta_sum_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+                 end if
+                 
+                 ! Sub-diagonal-in-L term
+                 if (L > 0) then
+                    ell = L - 1
+                    L_factor = L/(2*L-one) * L_scaling(L+1) * f_scaling(ell+1)
+                    colIndex = getIndex(level, itheta, izetaCol, ell+1)
+                    call MatSetValueSparse(matrix, rowIndex, colIndex, &
+                         L_factor*factor*ddzeta_sum_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+                 end if
               end if
               
-              ! Sub-diagonal-in-L term
-              if (L > 0) then
-                 ell = L - 1
-                 L_factor = L/(2*L-one)
-                 colIndex = getIndex(level, itheta, izetaCol, ell+1)
-                 call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                      L_factor*factor*ddzeta_sum_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
-              end if
-              
+              !if (whichMatrix .ne. 4) then
               !if (whichMatrix>0) then
               if (.true.) then
                  ! Super-super-diagonal-in-L term
                  if (L < Nxi-2) then
                     ell = L + 2
-                    L_factor = (L+two)*(L+one)/((two*L+5)*(two*L+3))
+                    L_factor = (L+two)*(L+one)/((two*L+5)*(two*L+3)) * L_scaling(L+1) * f_scaling(ell+1)
                     colIndex = getIndex(level, itheta, izetaCol, ell+1)
                     call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                         L_factor*factor*ddzeta_difference_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+                         upwinding_scale_factor_to_use*L_factor*factor*ddzeta_difference_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
                  end if
                  
                  ! Sub-sub-diagonal-in-L term
                  if (L > 1) then
                     ell = L - 2
-                    L_factor = (L-one)*L/((two*L-3)*(two*L-one))
+                    L_factor = (L-one)*L/((two*L-3)*(two*L-one)) * L_scaling(L+1) * f_scaling(ell+1)
                     colIndex = getIndex(level, itheta, izetaCol, ell+1)
                     call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                         L_factor*factor*ddzeta_difference_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
+                         upwinding_scale_factor_to_use*L_factor*factor*ddzeta_difference_to_use(izetaRow,izetaCol), ADD_VALUES, ierr)
                  end if
               end if
            end do
@@ -331,7 +339,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
               ell = L + 1
               colIndex = getIndex(level,itheta,izeta,ell+1)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                   temp*(L+1)*(L+2)/(2*L+3), ADD_VALUES, ierr)
+                   temp*(L+1)*(L+2)/(2*L+3) * L_scaling(L+1) * f_scaling(ell+1), ADD_VALUES, ierr)
            end if
            
            ! Sub-diagonal term                                                                                                                           
@@ -339,7 +347,7 @@ subroutine populateMatrix(matrix, whichMatrix, level)
               ell = L - 1
               colIndex = getIndex(level,itheta,izeta,ell+1)
               call MatSetValueSparse(matrix, rowIndex, colIndex, &
-                   temp*(-L)*(L-1)/(2*L-1), ADD_VALUES, ierr)
+                   temp*(-L)*(L-1)/(2*L-1) * L_scaling(L+1) * f_scaling(ell+1), ADD_VALUES, ierr)
            end if
            
         end do
@@ -351,8 +359,10 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      do izeta = izetaMin,izetaMax
         do L = 0,(Nxi-1)
            index = getIndex(level,itheta,izeta,L+1)
-           temp = nu/2*L*(L+1)
-           ! Let's use MatSetValue instead of MatSetValueSparse here to ensure the diagonal is set even if it is 0.                                                        
+           ell = L
+           temp = nu/2*L*(L+1) * L_scaling(L+1) * f_scaling(ell+1)
+           if (whichMatrix==4 .and. L==0 .and. shift_L0_in_smoother) temp = nu * L_scaling(L+1) * f_scaling(ell+1)  ! These diagonal elements are otherwise small, so shift them a little for the smoother matrix.
+           ! Let's use MatSetValue instead of MatSetValueSparse here to ensure the diagonal is set even if it is 0. 
            call MatSetValue(matrix, index, index, temp, ADD_VALUES, ierr)
         end do
      end do
@@ -396,10 +406,15 @@ subroutine populateMatrix(matrix, whichMatrix, level)
      call MatNullSpaceDestroy(nullspace,ierr)
   end if
 
-!!$  write (filename,fmt="(a,i1,a,i1,a)") "mmc_matrix_level_",level,'_whichMatrix_',whichMatrix,".dat"
-!!$  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
-!!$  call MatView(matrix, viewer, ierr)
-!!$  call PetscViewerDestroy(viewer, ierr)
+  write (filename,fmt="(a,i1,a,i1,a)") "mmc_matrix_level_",level,'_whichMatrix_',whichMatrix,".dat"
+  call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+  call MatView(matrix, viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
+
+  write (filename,fmt="(a,i1,a,i1,a)") "mmc_matrix_level_",level,'_whichMatrix_',whichMatrix,".txt"
+  call PetscViewerASCIIOpen(PETSC_COMM_WORLD, trim(filename), viewer, ierr)
+  call MatView(matrix, viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
 
 
 

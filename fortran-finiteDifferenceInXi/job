@@ -470,13 +470,79 @@
 #    -pc_gamg_threshold 0.2 | tee output
 
 # Defect correction, hypre, nonzero E
-./mmc -ksp_rtol 1e-5 -ksp_view -constraint_option 3  \
-    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
-    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
-    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
-    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
-    -options_left -Ntheta 29 -Nzeta 29 -Nxi 70 -nu 1e-3 -E 0.0 \
-    -ksp_type fgmres -ksp_max_it 200 -ksp_gmres_restart 1000 \
-    -pc_type hypre -pc_hypre_boomeramg_print_statistics 1 \
-    | tee output
+#./mmc -ksp_rtol 1e-5 -ksp_view -constraint_option 3  \
+#    -theta_derivative_option 8 -preconditioner_theta_derivative_option 4 \
+#    -zeta_derivative_option 8 -preconditioner_zeta_derivative_option 4 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 29 -Nzeta 29 -Nxi 70 -nu 1e-3 -E 0.0 \
+#    -ksp_type fgmres -ksp_max_it 200 -ksp_gmres_restart 1000 \
+#    -pc_type hypre -pc_hypre_boomeramg_print_statistics 1 \
+#    | tee output
 
+# 20170406
+
+# low-order operators everywhere, direct solve
+#mpiexec -n 1 ./mmc -ksp_rtol 1e-5 -constraint_option 2   \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -pc_type lu -pc_factor_mat_solver_package mumps -ksp_view | tee output
+
+# low-order operators everywhere, direct solve
+#mpiexec -n 1 ./mmc -ksp_rtol 1e-5 \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left  \
+#    -pc_type lu -pc_factor_mat_solver_package mumps -ksp_view | tee output
+
+# low-order operators everywhere, direct solve
+#mpiexec -n 1 ./mmc -ksp_rtol 1e-5 -constraint_option 2   \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 -mat_mumps_icntl_4 2 -mat_mumps_icntl_7 3 \
+#    -pc_type lu -pc_factor_mat_solver_package mumps -ksp_view | tee output
+
+# low-order operators everywhere, hypre
+# With 6 procs, there is often an error.
+#mpiexec -n 6 ./mmc -ksp_rtol 1e-5 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 3   \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -pc_type hypre -pc_hypre_boomeramg_interp_type direct -pc_hypre_boomeramg_print_statistics 1 -ksp_view | tee output
+
+# low-order operators everywhere, gamg
+#mpiexec -n 6 ./mmc -ksp_rtol 1e-5 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 3   \
+#    -theta_derivative_option 4 -zeta_derivative_option 4 \
+#    -xi_derivative_option 4 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 2  \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -ksp_type fgmres -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_sym_graph -pc_gamg_threshold 0.2 -ksp_view | tee output
+
+# Defect correction, mumps
+#./mmc -ksp_view -ksp_type fgmres -ksp_rtol 1e-5 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 2 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -pc_type lu -pc_factor_mat_solver_package mumps -mat_mumps_icntl_7 3 -mat_mumps_icntl_4 2 | tee output
+
+# Defect correction, hypre
+#./mmc -ksp_view -ksp_type fgmres -ksp_rtol 1e-5 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 0 \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -pc_type hypre -pc_hypre_boomeramg_print_statistics 1 | tee output
+
+# Defect correction, gamg
+./mmc -ksp_view -ksp_type fgmres -ksp_rtol 1e-5 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 3 \
+    -theta_derivative_option 8 -zeta_derivative_option 8 \
+    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+    -pitch_angle_scattering_option 3 \
+    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+    -pc_type gamg -pc_gamg_agg_nsmooths 0 -mg_levels_ksp_type richardson -pc_gamg_sym_graph -pc_gamg_threshold 0.2 | tee output

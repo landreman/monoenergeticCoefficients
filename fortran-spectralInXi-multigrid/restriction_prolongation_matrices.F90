@@ -113,10 +113,10 @@ subroutine restriction_prolongation_matrices(fine_level)
   call MatGetSize(multigrid_restriction_matrices(fine_level), num_rows, num_cols, ierr)
   select case (restriction_option)
   case (1)
-     if (coarsen_xi) then
-        print *,"Error! You should set restriction_option=2 when coarsen_xi=.true."
-        stop
-     end if
+!!$     if (coarsen_xi) then
+!!$        print *,"Error! You should set restriction_option=2 when coarsen_xi=.true."
+!!$        stop
+!!$     end if
      call VecReciprocal(row_sums, ierr)
      call VecGetSize(row_sums, num_rows, ierr)
      call MatDiagonalScale(multigrid_restriction_matrices(fine_level), row_sums, PETSC_NULL_OBJECT, ierr)
@@ -140,8 +140,18 @@ subroutine restriction_prolongation_matrices(fine_level)
   call MatView(multigrid_restriction_matrices(fine_level), viewer, ierr)
   call PetscViewerDestroy(viewer, ierr)
 
+  write (filename,fmt="(a,i1,a)") "mmc_restriction_matrix_level_",fine_level,".txt"
+  call PetscViewerASCIIOpen(PETSC_COMM_WORLD, trim(filename), viewer, ierr)
+  call MatView(multigrid_restriction_matrices(fine_level), viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
+
   write (filename,fmt="(a,i1,a)") "mmc_prolongation_matrix_level_",fine_level,".dat"
   call PetscViewerBinaryOpen(PETSC_COMM_WORLD, trim(filename), FILE_MODE_WRITE, viewer, ierr)
+  call MatView(multigrid_prolongation_matrices(fine_level), viewer, ierr)
+  call PetscViewerDestroy(viewer, ierr)
+
+  write (filename,fmt="(a,i1,a)") "mmc_prolongation_matrix_level_",fine_level,".txt"
+  call PetscViewerASCIIOpen(PETSC_COMM_WORLD, trim(filename), viewer, ierr)
   call MatView(multigrid_prolongation_matrices(fine_level), viewer, ierr)
   call PetscViewerDestroy(viewer, ierr)
 

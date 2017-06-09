@@ -10,7 +10,7 @@ subroutine populateRHS(vec)
   use petscvec
 
   use indices
-  use variables, only: G, I, masterProc, levels, Ntheta, Nzeta, Nxi
+  use variables, only: G, I, masterProc, levels, Ntheta, Nzeta, Nxi, L_scaling
 
   implicit none
 
@@ -43,11 +43,11 @@ subroutine populateRHS(vec)
 
            L=0
            index = getIndex(1,itheta,izeta,L+1)
-           call VecSetValue(vec, index, valueToInsert*4/(3.0d+0), INSERT_VALUES, ierr)
+           call VecSetValue(vec, index, valueToInsert*4/(3.0d+0) * L_scaling(L+1), INSERT_VALUES, ierr)
 
            L=2
            index = getIndex(1,itheta,izeta,L+1)
-           call VecSetValue(vec, index, valueToInsert*2/(3.0d+0), INSERT_VALUES, ierr)
+           call VecSetValue(vec, index, valueToInsert*2/(3.0d+0) * L_scaling(L+1), INSERT_VALUES, ierr)
         end do
      end do
   end if

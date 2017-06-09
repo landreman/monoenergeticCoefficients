@@ -69,12 +69,19 @@ program mmc
   Nzeta_min = 7
   Nxi_min = 9
 
-  smoothing_option = 1
+  smoothing_option = 0 ! Default was 1 before 20170608.
   restriction_option = 1
   coarsen_option = 1
   theta_diffusion = 0
   zeta_diffusion = 0
   defect_option = 1
+  shift_L0_in_smoother = .false.
+
+  f_scaling_option = 1
+  L_scaling_option = 3
+  omega = 1
+  upwinding_scale_factor = 1
+  preconditioner_upwinding_scale_factor = 1
 
 #if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
 #define new_argument PETSC_NULL_OBJECT,
@@ -104,6 +111,12 @@ program mmc
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-zeta_diffusion', zeta_diffusion, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-theta_diffusion', theta_diffusion, wasSet, ierr)
   call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-defect_option', defect_option, wasSet, ierr)
+  call PetscOptionsGetBool(new_argument PETSC_NULL_CHARACTER, '-shift_L0_in_smoother', shift_L0_in_smoother, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-f_scaling_option', f_scaling_option, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-L_scaling_option', L_scaling_option, wasSet, ierr)
+  call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-omega', omega, wasSet, ierr)
+  call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-upwinding_scale_factor', upwinding_scale_factor, wasSet, ierr)
+  call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-preconditioner_upwinding_scale_factor', preconditioner_upwinding_scale_factor, wasSet, ierr)
 
   ! Make sure Ntheta and Nzeta are odd:
   if (mod(Ntheta, 2) == 0) then
@@ -135,7 +148,16 @@ program mmc
      print *,"theta_diffusion = ",theta_diffusion
      print *,"zeta_diffusion = ",zeta_diffusion
      print *,"defect_option = ",defect_option
+     print *,"shift_L0_in_smoother = ",shift_L0_in_smoother
+     print *,"f_scaling_option = ",f_scaling_option
+     print *,"L_scaling_option = ",L_scaling_option
+     print *,"omega = ",omega
+     print *,"upwinding_scale_factor = ",upwinding_scale_factor
+     print *,"preconditioner_upwinding_scale_factor = ",preconditioner_upwinding_scale_factor
   end if
+
+  if (omega<0) stop "omega must be >= 0."
+  if (omega>1) stop "omega must be <= 1."
 
   if (constraint_option<0 .or. constraint_option>2) stop "Invalid constraint_option"
 

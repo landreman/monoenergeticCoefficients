@@ -168,7 +168,6 @@
 
     theta => levels(level)%theta
     thetaWeights => levels(level)%thetaWeights
-
     ddtheta_plus => levels(level)%ddtheta_plus
     ddtheta_minus => levels(level)%ddtheta_minus
     ddtheta_plus_preconditioner => levels(level)%ddtheta_plus_preconditioner
@@ -401,7 +400,6 @@
 
     zeta => levels(level)%zeta
     zetaWeights  => levels(level)%zetaWeights
-
     ddzeta_plus => levels(level)%ddzeta_plus
     ddzeta_minus => levels(level)%ddzeta_minus
     ddzeta_plus_preconditioner => levels(level)%ddzeta_plus_preconditioner

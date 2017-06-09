@@ -200,7 +200,7 @@ subroutine populateMatrix(matrix, whichMatrix)
      call MatNullSpaceDestroy(nullspace,ierr)
      call VecDestroy(null_Vecs(1),ierr)
 
-     call MatView(matrix,PETSC_VIEWER_STDOUT_WORLD,ierr)
+     !call MatView(matrix,PETSC_VIEWER_STDOUT_WORLD,ierr)
   end if
 
   write (filename,fmt="(a,i1,a)") "mmc_matrix_",whichMatrix,".dat"

@@ -91,6 +91,9 @@ subroutine setup_multigrid()
            levels(level)%smoothing_matrix = levels(level)%low_order_matrix
         end if
 
+        call MatScale(levels(level)%smoothing_matrix, omega, ierr)
+        call MatShift(levels(level)%smoothing_matrix, 1-omega, ierr)
+
         call PCMGGetSmoother(preconditioner_context,N_levels-level,smoother_ksp,ierr)
         call KSPSetOperators(smoother_ksp, levels(level)%smoothing_matrix, levels(level)%smoothing_matrix, ierr)
         call KSPSetType(smoother_KSP, KSPRICHARDSON, ierr)

@@ -7,7 +7,7 @@ EXTRA_LINK_FLAGS =
 
 TARGET = mmc
 
-OBJ_FILES = computeB.o create_grids.o diagnostics.o indices.o mmc.o \
+OBJ_FILES = apply_preconditioner.o computeB.o create_grids.o diagnostics.o indices.o mmc.o \
 	periodic_interpolation.o populateMatrix.o \
 	populateRHS.o preallocateMatrix.o restriction_prolongation_matrices.o setup_multigrid.o set_grid_resolutions.o \
 	sparsify.o uniformDiffMatrices.o variables.o
@@ -33,6 +33,7 @@ clean::
 	rm -f *.o *.mod *.a *.dat *~ $(TARGET)
 
 # Dependencies:
+apply_preconditioner.o: indices.o variables.o
 computeB.o: variables.o
 create_grids.o: variables.o
 diagnostics.o: indices.o variables.o

@@ -12,8 +12,8 @@ module variables
 !!#include <finclude/petscsys.h>
 !#include <finclude/petscsysdef.h>
 
-  KSP :: main_ksp
-  PC :: preconditioner_context
+  KSP :: outer_ksp, inner_ksp
+  PC :: outer_preconditioner, inner_preconditioner
 
   PetscInt :: Ntheta, Nzeta, Nxi, Nperiods, helicity_l, matrixSize
   PetscReal :: nu, E, epsilon_t, epsilon_h, iota, G, I
@@ -86,5 +86,7 @@ module variables
   integer :: L_scaling_option
   PetscScalar, dimension(:), allocatable :: f_scaling, L_scaling
   PetscScalar :: omega, upwinding_scale_factor, preconditioner_upwinding_scale_factor
+
+  integer :: preconditioning_option ! 1=just apply inner_KSP, 2=also explicitly handle the sources and constraints.
 
 end module variables

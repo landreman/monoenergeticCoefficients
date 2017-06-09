@@ -24,7 +24,7 @@ subroutine setup_multigrid()
   if (masterProc) print *,"Entering setup_multigrid"
 
   call set_grid_resolutions()
-  call PCMGSetLevels(preconditioner_context,N_levels, PETSC_NULL_OBJECT,ierr)
+  call PCMGSetLevels(inner_preconditioner,N_levels, PETSC_NULL_OBJECT,ierr)
 
   do j = 1,N_levels
      call create_grids(j)
@@ -49,18 +49,20 @@ subroutine setup_multigrid()
         call populateMatrix(levels(j)%high_order_matrix,1,j)
      end if
 
-     ! Build the low-order matrix at this level:
-     call preallocateMatrix(levels(j)%low_order_matrix,0,j)
-     call populateMatrix(levels(j)%low_order_matrix,0,j)
-
+     if (defect_option==1 .or. constraint_option==0) then
+        ! Build the low-order matrix at this level:
+        call preallocateMatrix(levels(j)%low_order_matrix,0,j)
+        call populateMatrix(levels(j)%low_order_matrix,0,j)
+     end if
   end do
 
-  call KSPSetOperators(main_ksp, levels(1)%high_order_matrix, levels(1)%low_order_matrix, ierr)
+  call KSPSetOperators(outer_ksp, levels(1)%high_order_matrix, levels(1)%high_order_matrix, ierr) ! The Pmat here shouldn't matter since we have a shell PC.
+  call KSPSetOperators(inner_ksp, levels(1)%high_order_matrix, levels(1)%high_order_matrix, ierr) ! This line shouldn't matter, since we manually set the residual and smoother at each level and the operator for the coarse solve.
   do j = 1,N_levels
      if (defect_option==1) then
-        call PCMGSetResidual(preconditioner_context, N_levels-j, PCMGResidualDefault, levels(j)%low_order_matrix, ierr)
+        call PCMGSetResidual(inner_preconditioner, N_levels-j, PCMGResidualDefault, levels(j)%low_order_matrix, ierr)
      else
-        call PCMGSetResidual(preconditioner_context, N_levels-j, PCMGResidualDefault, levels(j)%high_order_matrix, ierr)
+        call PCMGSetResidual(inner_preconditioner, N_levels-j, PCMGResidualDefault, levels(j)%high_order_matrix, ierr)
      end if
   end do
 
@@ -72,8 +74,8 @@ subroutine setup_multigrid()
   do j=1,N_levels-1
      call restriction_prolongation_matrices(j)
      ! My level 1 is the finest. PETSc's level 0 is the coarsest.
-     call PCMGSetRestriction(  preconditioner_context,N_levels-j, multigrid_restriction_matrices(j),ierr)
-     call PCMGSetInterpolation(preconditioner_context,N_levels-j,multigrid_prolongation_matrices(j),ierr)
+     call PCMGSetRestriction(  inner_preconditioner,N_levels-j, multigrid_restriction_matrices(j),ierr)
+     call PCMGSetInterpolation(inner_preconditioner,N_levels-j,multigrid_prolongation_matrices(j),ierr)
   end do
 
   ! *****************************************************
@@ -94,7 +96,7 @@ subroutine setup_multigrid()
         call MatScale(levels(level)%smoothing_matrix, omega, ierr)
         call MatShift(levels(level)%smoothing_matrix, 1-omega, ierr)
 
-        call PCMGGetSmoother(preconditioner_context,N_levels-level,smoother_ksp,ierr)
+        call PCMGGetSmoother(inner_preconditioner,N_levels-level,smoother_ksp,ierr)
         call KSPSetOperators(smoother_ksp, levels(level)%smoothing_matrix, levels(level)%smoothing_matrix, ierr)
         call KSPSetType(smoother_KSP, KSPRICHARDSON, ierr)
      end do
@@ -107,7 +109,7 @@ subroutine setup_multigrid()
            levels(level)%smoothing_matrix = levels(level)%low_order_matrix
         end if
 
-        call PCMGGetSmoother(preconditioner_context,N_levels-level,smoother_ksp,ierr)
+        call PCMGGetSmoother(inner_preconditioner,N_levels-level,smoother_ksp,ierr)
         call KSPSetOperators(smoother_ksp, levels(level)%smoothing_matrix, levels(level)%smoothing_matrix, ierr)
 
         call KSPSetType(smoother_KSP, KSPRICHARDSON, ierr)
@@ -130,7 +132,7 @@ subroutine setup_multigrid()
            levels(level)%smoothing_matrix = levels(level)%low_order_matrix
         end if
 
-        call PCMGGetSmoother(preconditioner_context,N_levels-level,smoother_ksp,ierr)
+        call PCMGGetSmoother(inner_preconditioner,N_levels-level,smoother_ksp,ierr)
         call KSPSetOperators(smoother_ksp, levels(level)%smoothing_matrix, levels(level)%smoothing_matrix, ierr)
 
         call KSPSetType(smoother_KSP, KSPRICHARDSON, ierr)
@@ -178,11 +180,11 @@ subroutine setup_multigrid()
 !!$        print *,"4.5 4.5 4.5"
 !!$        call KSPSetOperators(levels(level)%smoothing_ksp, levels(level)%smoothing_diagonal_matrix, levels(level)%smoothing_diagonal_matrix, ierr)
 !!$        print *,"55555"
-!!$        call KSPGetPC(levels(level)%smoothing_ksp,preconditioner_context,ierr)
+!!$        call KSPGetPC(levels(level)%smoothing_ksp,inner_preconditioner,ierr)
 !!$        print *,"5.5 5.5 5.5"
-!!$        call PCSetType(preconditioner_context,PCLU,ierr)
+!!$        call PCSetType(inner_preconditioner,PCLU,ierr)
 !!$        call KSPSetType(levels(level)%smoothing_ksp, KSPPREONLY, ierr)
-!!$        call PCFactorSetMatSolverPackage(preconditioner_context, MATSOLVERMUMPS, ierr)
+!!$        call PCFactorSetMatSolverPackage(inner_preconditioner, MATSOLVERMUMPS, ierr)
 !!$
 !!$        print *,"666666"
 !!$        write (filename,fmt="(a,i1,a)") "mmc_smoothing_diagonal_matrix_level_",level,".dat"
@@ -207,8 +209,8 @@ subroutine setup_multigrid()
 !!$
 !!$        call KSPCreate(PETSC_COMM_WORLD,levels(level)%smoothing_ksp,ierr)
 !!$        call KSPSetOperators(levels(level)%smoothing_ksp, levels(level)%smoothing_off_diagonal_matrix, levels(level)%smoothing_off_diagonal_matrix, ierr)
-!!$        call KSPGetPC(levels(level)%smoothing_ksp,preconditioner_context,ierr)
-!!$        call PCSetType(preconditioner_context,PCSOR,ierr)
+!!$        call KSPGetPC(levels(level)%smoothing_ksp,inner_preconditioner,ierr)
+!!$        call PCSetType(inner_preconditioner,PCSOR,ierr)
 !!$        call KSPSetType(levels(level)%smoothing_ksp, KSPRICHARDSON, ierr)
 !!$        call KSPSetTolerances(levels(level)%smoothing_ksp, PETSC_DEFAULT_REAL, PETSC_DEFAULT_REAL, PETSC_DEFAULT_REAL, 2, ierr) ! Is the correct number of iterations 2 or 1?
 !!$        call KSPSetNormType(levels(level)%smoothing_ksp, KSP_NORM_NONE, ierr)
@@ -220,7 +222,7 @@ subroutine setup_multigrid()
 
 
   ! Set up the direct solver for the coarsest level
-  call PCMGGetCoarseSolve(preconditioner_context,ksp_on_coarsest_level,ierr)
+  call PCMGGetCoarseSolve(inner_preconditioner,ksp_on_coarsest_level,ierr)
   if (defect_option==2) then
      if (masterProc) print *,"Using HIGH order matrix for the direct solve on the coarest level."
      call KSPSetOperators(ksp_on_coarsest_level, levels(N_levels)%high_order_matrix, levels(N_levels)%high_order_matrix, ierr)

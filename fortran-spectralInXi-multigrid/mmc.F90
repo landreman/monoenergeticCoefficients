@@ -32,7 +32,7 @@ program mmc
 #endif
 
   !external populateMatrix, populateRHS
-  external apply_multigrid_cycle
+  external apply_preconditioner
 
   call PETSCInitialize(PETSC_NULL_CHARACTER, ierr)
   call MPI_COMM_SIZE(PETSC_COMM_WORLD, numProcs, ierr)
@@ -82,6 +82,7 @@ program mmc
   omega = 1
   upwinding_scale_factor = 1
   preconditioner_upwinding_scale_factor = 1
+  preconditioning_option = 1
 
 #if (PETSC_VERSION_MAJOR > 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR > 6))
 #define new_argument PETSC_NULL_OBJECT,
@@ -117,6 +118,7 @@ program mmc
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-omega', omega, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-upwinding_scale_factor', upwinding_scale_factor, wasSet, ierr)
   call PetscOptionsGetReal(new_argument PETSC_NULL_CHARACTER, '-preconditioner_upwinding_scale_factor', preconditioner_upwinding_scale_factor, wasSet, ierr)
+  call PetscOptionsGetInt(new_argument PETSC_NULL_CHARACTER, '-preconditioning_option', preconditioning_option, wasSet, ierr)
 
   ! Make sure Ntheta and Nzeta are odd:
   if (mod(Ntheta, 2) == 0) then
@@ -154,6 +156,7 @@ program mmc
      print *,"omega = ",omega
      print *,"upwinding_scale_factor = ",upwinding_scale_factor
      print *,"preconditioner_upwinding_scale_factor = ",preconditioner_upwinding_scale_factor
+     print *,"preconditioning_option = ",preconditioning_option
   end if
 
   if (omega<0) stop "omega must be >= 0."
@@ -161,9 +164,18 @@ program mmc
 
   if (constraint_option<0 .or. constraint_option>2) stop "Invalid constraint_option"
 
-  call KSPCreate(PETSC_COMM_WORLD,main_ksp,ierr)
-  call KSPGetPC(main_ksp,preconditioner_context,ierr)
-  call PCSetType(preconditioner_context,PCMG,ierr)
+  call KSPCreate(PETSC_COMM_WORLD,outer_ksp,ierr)
+  call KSPAppendOptionsPrefix(outer_ksp, 'outer_', ierr)
+  call KSPSetType(outer_ksp, KSPFGMRES, ierr)
+  call KSPGetPC(outer_ksp,outer_preconditioner,ierr)
+  call PCSetType(outer_preconditioner, PCSHELL, ierr)
+  call PCShellSetApply(outer_preconditioner, apply_preconditioner, ierr)
+
+  call KSPCreate(PETSC_COMM_WORLD, inner_ksp, ierr)
+  call KSPAppendOptionsPrefix(inner_ksp, 'inner_', ierr)
+  call KSPSetType(inner_ksp, KSPPREONLY, ierr)
+  call KSPGetPC(inner_ksp, inner_preconditioner, ierr)
+  call PCSetType(inner_preconditioner, PCMG,ierr)
 
   call setup_multigrid()
 
@@ -181,31 +193,34 @@ program mmc
 !  call KSPSetComputeRHS(ksp,populateRHS,userContext,ierr)
 !  call KSPSetComputeOperators(ksp,populateMatrix,userContext,ierr)
 #if (PETSC_VERSION_MAJOR < 3 || (PETSC_VERSION_MAJOR==3 && PETSC_VERSION_MINOR < 7))
-  call KSPMonitorSet(main_ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
+  call KSPMonitorSet(outer_ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr)
 #else
   call PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, vf, ierr) 
   !call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
-  call KSPMonitorSet(main_ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
+  call KSPMonitorSet(outer_ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
 #endif
-  call KSPSetFromOptions(main_ksp,ierr)
+  call KSPSetFromOptions(outer_ksp,ierr)
+  call KSPSetFromOptions(inner_ksp,ierr)
   
   !call VecView(rhs, PETSC_VIEWER_STDOUT_WORLD, ierr)
   if (masterProc) then
      print *,"Beginning solve..."
   end if
-  call KSPSolve(main_ksp, rhs, solution, ierr)
+  call KSPSolve(outer_ksp, rhs, solution, ierr)
   if (masterProc) then
      print *,"Done!"
   end if
 
-  call KSPGetConvergedReason(main_ksp, reason, ierr)
+  call KSPGetConvergedReason(outer_ksp, reason, ierr)
   if (reason<=0) then
      if (masterProc) print *,"Error! Outer KSP did not converge. KSPConvergedReason=",reason
   end if
 
   call diagnostics(solution)
 
-  call KSPDestroy(main_ksp,ierr)
+  call KSPView(outer_KSP, PETSC_VIEWER_STDOUT_WORLD, ierr)
+
+  call KSPDestroy(outer_ksp,ierr)
 
   call PETScFinalize(ierr)
 

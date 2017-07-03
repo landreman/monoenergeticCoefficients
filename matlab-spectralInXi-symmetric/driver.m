@@ -16,7 +16,7 @@ resolutionParameters = struct(...
 nu = 1e-1;
 E=0;
 % Results should be flux (L11) = -0.0329, flow (L21) = 0.0111
-    
+  
 %{
 resolutionParameters = struct(...
     'Ntheta', 15,...
@@ -25,6 +25,15 @@ resolutionParameters = struct(...
 nu = 1e-2;
 E=0;
 % Results should be flux (L11) = -0.0392731, flow (L21) = -0.237442.
+%}
+%{
+resolutionParameters = struct(...
+    'Ntheta', 29,...
+    'Nzeta', 29,...
+    'Nxi', 70);
+nu = 1e-3;
+E=0;
+% Results should be flux (L11) = -0.0919146, flow (L21) = -1.08133
 %}
 
 % Collisionality:
@@ -41,19 +50,30 @@ nu = nuPrime * nuD;
 fprintf('For SFINCS nuPrime=%g, the equivalent nu for the monoenergetic code=%g\n',nuPrime,nu)
 %}
 
-
+derivative_option_main = 1;
+derivative_option_preconditioner = 1;
+% 1 = 3-point stencil
+% 2 = 5-point stencil
 
 solutionMethod = 2;
 % 1 = sparse direct solver (backslash)
 % 2 = sparse direct solver (explicit LU decomposition, so memory can be monitored.)
 % 3 = GMRES with no preconditioning
+% 4 = GMRES with preconditioning
+% 5 = MINRES with preconditioning
 
 % **********************************************************
 % End of input parameters.
 % **********************************************************
 
 tic
-problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters);
+problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters, derivative_option_main);
+fprintf('Time to assemble matrix: %g sec\n',toc)
+if derivative_option_main == derivative_option_preconditioner
+    preconditioner = problem;
+else
+    preconditioner = assembleMatrix(resolutionParameters, nu, E, geometryParameters, derivative_option_preconditioner);
+end
 fprintf('Time to assemble matrix: %g sec\n',toc)
 
 figure(1)
@@ -92,7 +112,7 @@ fprintf('rcond: %e   Time for rcond: %g\n',rcond_result,toc)
 
 tic
 fprintf('Beginning solve.\n')
-[solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
+[solution, totalNNZ] = solver(problem.matrix, preconditioner.matrix, problem.rhs, solutionMethod);
 fprintf('Done. Time for solve: %g sec\n',toc)
 
 fprintf('Sources: %g, %g  (Should be within machine precision of 0)\n',solution(end-1), solution(end))

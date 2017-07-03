@@ -15,12 +15,23 @@ resolutionParameters = struct(...
     'Nxi', 16,...
     'includeConstraint', true);
 %}
-    
+    %{
 resolutionParameters = struct(...
     'Ntheta', 15,...
     'Nzeta', 15,...
-    'Nxi', 70,...
+    'Nxi', 16,...
     'includeConstraint', true);
+nu = 1e-1;
+% Results should be flux (L11) = -0.032884, flow (L21) = 0.0110949
+%}
+
+resolutionParameters = struct(...
+    'Ntheta', 15,...
+    'Nzeta', 15,...
+    'Nxi', 30,...
+    'includeConstraint', true);
+nu = 1e-2;
+% Results should be flux (L11) = -0.0392731, flow (L21) = -0.237442.
 
     %{
     % High Ntheta and Nzeta, low Nxi
@@ -54,9 +65,8 @@ resolutionParameters = struct(...
 %}
 % Collisionality:
 % (Typically nu << 1, so advection dominates diffusion.)
-nu = 1e-3;
 
-
+%{
 % Collisionality, using the same normalization as in SFINCS:
 nuPrime = 0.1;
 
@@ -65,7 +75,7 @@ Psi_Chandra = (erf(1) - 2/sqrt(pi)*exp(-1)) / 2;
 nuD = 3*sqrt(pi)/4*(erf(1) - Psi_Chandra);
 nu = nuPrime * nuD;
 fprintf('For SFINCS nuPrime=%g, the equivalent nu for the monoenergetic code=%g\n',nuPrime,nu)
-
+%}
 
 
 solutionMethod = 2;

@@ -1,4 +1,4 @@
-function returnStruct = assembleMatrix(resolutionParameters, nu_prime, E, geometryParameters)
+function returnStruct = assembleMatrix(resolutionParameters, nu_prime, E, geometryParameters, derivative_option)
 
 Ntheta = resolutionParameters.Ntheta;
 Nzeta = resolutionParameters.Nzeta;
@@ -9,7 +9,7 @@ matrixSize = Ntheta*Nzeta*Nxi + Ntheta*Nzeta + 2;
 nu_hat = nu_prime / (geometryParameters.G + geometryParameters.iota * geometryParameters.I);
 
 % Build theta grid:
-[theta, ddtheta, thetaWeights] = setupGrid(Ntheta,0,2*pi);
+[theta, ddtheta, thetaWeights] = setupGrid(Ntheta,0,2*pi,derivative_option);
 
 % Build zeta grid:
 if Nzeta==1
@@ -18,7 +18,7 @@ if Nzeta==1
     zetaWeights=2*pi;
 else
     zetaMax = 2*pi/geometryParameters.Nperiods;
-    [zeta, ddzeta, zetaWeights] = setupGrid(Nzeta,0,zetaMax);
+    [zeta, ddzeta, zetaWeights] = setupGrid(Nzeta,0,zetaMax,derivative_option);
     zetaWeights = zetaWeights * geometryParameters.Nperiods;
 end
 

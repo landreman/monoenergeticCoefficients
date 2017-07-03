@@ -1,4 +1,4 @@
-function [x, D, weights] = setupGrid(N,xMin,xMax)
+function [x, D, weights] = setupGrid(N,xMin,xMax, derivative_option)
 
 % This function sets up the grid and finite difference differentiation
 % matrix for a periodic coordinate.
@@ -14,19 +14,37 @@ dx = x(2)-x(1);
 
 weights = ones(size(x))*dx;
 
-% Build the finite-difference differentiation matrix:
-D=(-diag((1/6)*ones(N-2,1),2) ...
-    + diag((4/3)*ones(N-1,1),1) ...
-    - diag((4/3)*ones(N-1,1),-1) ...
-    + diag((1/6)*ones(N-2,1),-2))/(2*dx);
-
-% Due to periodicity, the corners need to be populated as well:
-D(1, end) = -(4/3)/(2*dx);
-D(1, end-1) = (1/6)/(2*dx);
-D(2, end) = (1/6)/(2*dx);
-
-D(end, 1) = (4/3)/(2*dx);
-D(end, 2) = -(1/6)/(2*dx);
-D(end-1, 1) = -(1/6)/(2*dx);
-
+switch derivative_option
+    case 1
+        % 3-point stencil
+        
+        % Build the finite-difference differentiation matrix:
+        D=(diag(ones(N-1,1),1) ...
+            - diag(ones(N-1,1),-1))/(2*dx);
+        
+        % Due to periodicity, the corners need to be populated as well:
+        D(1, end) = -1/(2*dx);
+        
+        D(end, 1) = 1/(2*dx);
+        
+    case 2
+        % 5-point stencil
+        
+        % Build the finite-difference differentiation matrix:
+        D=(-diag((1/6)*ones(N-2,1),2) ...
+            + diag((4/3)*ones(N-1,1),1) ...
+            - diag((4/3)*ones(N-1,1),-1) ...
+            + diag((1/6)*ones(N-2,1),-2))/(2*dx);
+        
+        % Due to periodicity, the corners need to be populated as well:
+        D(1, end) = -(4/3)/(2*dx);
+        D(1, end-1) = (1/6)/(2*dx);
+        D(2, end) = (1/6)/(2*dx);
+        
+        D(end, 1) = (4/3)/(2*dx);
+        D(end, 2) = -(1/6)/(2*dx);
+        D(end-1, 1) = -(1/6)/(2*dx);
+    otherwise
+        error('Invalid derivative_option')
+end
 end

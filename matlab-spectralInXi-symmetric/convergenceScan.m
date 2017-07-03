@@ -10,15 +10,15 @@ geometryParameters = struct(...
     'helicity_l',2);
 
 
-NthetaConverged = 31;
-Nthetas = 21:2:55;
+NthetaConverged = 13;
+Nthetas = 11:2:25;
 
-NzetaConverged = 19;
-Nzetas = 15:2:33;
+NzetaConverged = 15;
+Nzetas = 13:2:25;
 
-NxiConverged = 50;
-%Nxis = 15:25;
-Nxis = round(linspace(30,100,15));
+NxiConverged = 16;
+Nxis = 15:25;
+%Nxis = round(linspace(30,100,15));
 
 %{
 % Collisionality, using the same normalization as in SFINCS:
@@ -29,7 +29,8 @@ Psi_Chandra = (erf(1) - 2/sqrt(pi)*exp(-1)) / 2;
 nuD = 3*sqrt(pi)/4*(erf(1) - Psi_Chandra);
 nu = nuPrime * nuD;
 %}
-nu=0.001;
+nu=0.1;
+E = 0;
 
 includeConstraint = true;
 solutionMethod = 2;
@@ -61,7 +62,7 @@ for iii = 1:numel(Nthetas)
         'Nxi', NxiConverged,...
         'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
-    problem = assembleMatrix(resolutionParameters, nu, geometryParameters);
+    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters);
     tic
     [solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
@@ -80,7 +81,7 @@ for iii = 1:numel(Nzetas)
         'Nxi', NxiConverged,...
         'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
-    problem = assembleMatrix(resolutionParameters, nu, geometryParameters);
+    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters);
     tic
     [solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);
@@ -99,7 +100,7 @@ for iii = 1:numel(Nxis)
         'Nxi', Nxis(iii),...
         'includeConstraint', includeConstraint);
     fprintf('Beginning solve %d of %d.\n',runNum,numRuns); runNum = runNum+1;
-    problem = assembleMatrix(resolutionParameters, nu, geometryParameters);
+    problem = assembleMatrix(resolutionParameters, nu, E, geometryParameters);
     tic
     [solution, totalNNZ] = solver(problem.matrix, problem.rhs, solutionMethod);
     outputs = diagnostics(resolutionParameters, geometryParameters, problem, solution);

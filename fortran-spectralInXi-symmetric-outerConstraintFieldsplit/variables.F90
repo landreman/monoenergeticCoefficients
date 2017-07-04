@@ -4,7 +4,7 @@ module variables
   implicit none
 
 !#include <finclude/petscsys.h>
-#include <petsc/finclude/petscmatdef.h>
+#include <petsc/finclude/petsckspdef.h>
 
   PetscInt :: Ntheta, Nzeta, Nxi, Nperiods, helicity_l, matrixSize
   PetscReal :: nu, nu_hat, E, epsilon_t, epsilon_h, iota, G, I
@@ -32,6 +32,7 @@ module variables
   PetscScalar, dimension(:), allocatable :: L_scaling
   Vec :: weights_vec, CHat_inverse
   Mat :: V_matrix, pick_out_p0_matrix, injection_matrix
-  integer :: fieldsplit_option, constraint_option
+  integer :: fieldsplit_option
+  KSP :: inner_KSP
 
 end module variables

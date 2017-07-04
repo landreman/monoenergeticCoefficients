@@ -14,8 +14,7 @@ subroutine createGrids()
 
   if (masterProc) print *,"Entering createGrids."
 
-  matrixSize = Ntheta*Nzeta*Nxi + Ntheta*Nzeta
-  if (constraint_option==1) matrixSize = matrixSize + 2
+  matrixSize = Ntheta*Nzeta*Nxi + Ntheta*Nzeta + 2
   if (masterProc) print *,"matrixSize=",matrixSize
 
   allocate(L_scaling(Nxi))

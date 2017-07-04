@@ -1,4 +1,4 @@
-function [solution, totalNNZ] = solver(matrix, preconditioner, rhs, solutionMethod)
+function [solution, totalNNZ] = solver(matrix, preconditioner, rhs, solutionMethod, block_size)
 
 % Options for solutionMethod:
 % 1 = direct solver (backslash)
@@ -119,6 +119,43 @@ switch solutionMethod
         xlabel('Iteration number');
         ylabel('Relative residual');
         title('Convergence of MINRES');
+        
+    case 6
+        % GMRES, preconditioning based on the 2x2 block structure
+        
+        matrix_a = preconditioner(1:block_size, 1:block_size);
+        matrix_b = preconditioner(1:block_size, (block_size+1):end);
+        matrix_c = preconditioner((block_size+1):end, 1:block_size);
+        
+        fprintf('LU-factorizing the preconditioner matrix.\n')
+        [preconditioner_L, preconditioner_U, preconditioner_P, preconditioner_Q] = lu(preconditioner);
+        totalNNZ = nnz(preconditioner_L)+nnz(preconditioner_U);
+        fprintf('nnz(L): %d,  nnz(U): %d,  total: %d\n',nnz(preconditioner_L), nnz(preconditioner_U), totalNNZ)
+        %solution = preconditioner_Q * (preconditioner_U \ (preconditioner_L \ (preconditioner_P * (rhs))));
+        
+        restart = 100;
+        tol = 1e-8;
+        maxIterations = 200;
+        
+        fprintf('Beginning GMRES.\n')
+        x0 = zeros(size(rhs));
+        [solution,fl0,rr0,it0,rv0]=gmres(matrix,rhs,restart,tol,maxIterations/restart,@apply_preconditioner, [], x0);
+        switch fl0
+            case 0
+                fprintf('Converged!\n')
+            case 1
+                fprintf('Did not converge :(\n')
+            case 2
+                fprintf('Preconditioner was ill-conditioned\n')
+            case 3
+                fprintf('Stagnated :(\n')
+        end
+        figure(3)
+        clf
+        semilogy(rv0/rv0(1),'-o');
+        xlabel('Iteration number');
+        ylabel('Relative residual');
+        title('Convergence of GMRES');
         
     otherwise
         error('Invalid value for solverType')

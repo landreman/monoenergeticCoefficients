@@ -1,6 +1,6 @@
 #include <petsc/finclude/petscmatdef.h>
 
-subroutine populateMatrix(matrix)
+subroutine populateMatrix(matrix, whichMatrix)
 
   use petscmat
 
@@ -17,6 +17,7 @@ subroutine populateMatrix(matrix)
   !#include <finclude/petscdmda.h>
 
   Mat :: matrix
+  integer :: whichMatrix
 
   PetscErrorCode :: ierr
   MatNullSpace :: nullspace
@@ -33,7 +34,7 @@ subroutine populateMatrix(matrix)
   Mat :: temp_mat, temp_mat2
 
   if (masterProc) then
-     print *,"Entering populateMatrix."
+     print *,"Entering populateMatrix with whichMatrix =",whichMatrix
   end if
 
   ! For simplicity, do all work on the master proc.
@@ -238,27 +239,28 @@ subroutine populateMatrix(matrix)
 
   call preallocateMatrix(matrix)
   if (masterProc) then
-     if (constraint_option==1) then
-        print *,"Adding constraint rows and source columns"
-        L = 0
-        do itheta = 1,Ntheta
-           do izeta = 1,Nzeta
-              index = getIndex(itheta,izeta,L+1)
-              factor = (thetaWeight * zetaWeight / VPrime) * sqrt_g(itheta,izeta)
-              call MatSetValue(matrix, matrixSize-2, index, factor, ADD_VALUES, ierr)
-              call MatSetValue(matrix, index, matrixSize-2, factor, ADD_VALUES, ierr)
-              call MatSetValue(matrix, matrixSize-1, index + Ntheta*Nzeta*Nxi, factor, ADD_VALUES, ierr)
-              call MatSetValue(matrix, index + Ntheta*Nzeta*Nxi, matrixSize-1, factor, ADD_VALUES, ierr)
-           end do
+     L = 0
+     do itheta = 1,Ntheta
+        do izeta = 1,Nzeta
+           index = getIndex(itheta,izeta,L+1)
+           factor = (thetaWeight * zetaWeight / VPrime) * sqrt_g(itheta,izeta)
+           call MatSetValue(matrix, matrixSize-2, index, factor, ADD_VALUES, ierr)
+           call MatSetValue(matrix, index, matrixSize-2, factor, ADD_VALUES, ierr)
+           call MatSetValue(matrix, matrixSize-1, index + Ntheta*Nzeta*Nxi, factor, ADD_VALUES, ierr)
+           call MatSetValue(matrix, index + Ntheta*Nzeta*Nxi, matrixSize-1, factor, ADD_VALUES, ierr)
         end do
-     else
-        print *,"NOT adding constraint rows and source columns"
-     end if
+     end do
 
      ! Add 0's on the diagonal, to avoid errors when we try to shift the diagonal later
      do index = 0,(matrixSize-1) ! Remember PETSc indices are 0-based
         call MatSetValue(matrix, index, index, zero, ADD_VALUES, ierr)
      end do
+
+     if (whichMatrix==0 .and. fieldsplit_option==1) then
+        print *,"Adding 1's to the diagonal of the source/constraint rows/columns."
+        call MatSetValue(matrix, matrixSize-2, matrixSize-2, one, ADD_VALUES, ierr)
+        call MatSetValue(matrix, matrixSize-1, matrixSize-1, one, ADD_VALUES, ierr)
+     end if
   end if
 
   

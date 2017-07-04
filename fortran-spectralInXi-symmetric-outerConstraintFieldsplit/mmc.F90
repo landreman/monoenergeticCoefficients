@@ -17,18 +17,18 @@ program mmc
 
   PetscErrorCode ierr
   PetscBool :: wasSet
-  KSP :: ksp
-  PC :: pc
+  KSP :: outer_ksp
+  PC :: outer_preconditioner, inner_preconditioner
   Vec :: rhs, solution
   PetscInt :: userContext ! Not used
-  Mat :: matrix
-  PetscViewerAndFormat vf
+  Mat :: matrix, preconditionerMatrix
+  PetscViewerAndFormat :: vf
   PetscViewer :: viewer
   integer, dimension(:), allocatable :: is_array
-  IS :: my_IS
+  IS :: IS_f0F1, IS_source_constraint
   integer :: j
 
-  external populateMatrix, populateRHS
+  external apply_preconditioner
 
   call PETSCInitialize(PETSC_NULL_CHARACTER, ierr)
   call MPI_COMM_SIZE(PETSC_COMM_WORLD, numProcs, ierr)
@@ -54,7 +54,6 @@ program mmc
   zetaGridScheme = 10
   L_scaling_option = 2
   fieldsplit_option = 0
-  constraint_option = 1
 
   print *,"AAA"
   call readInput()
@@ -62,7 +61,7 @@ program mmc
   ! Command-line arguments will override input.namelist:
 
   call PetscOptionsInsertString(PETSC_NULL_OBJECT, "-options_left", ierr) ! This helps for spotting misspelled options!
-  call PetscOptionsInsertString(PETSC_NULL_OBJECT, "-ksp_view", ierr)
+  call PetscOptionsInsertString(PETSC_NULL_OBJECT, "-outer_ksp_view", ierr)
   print *,"CCC"
 
   call PetscOptionsGetInt(PETSC_NULL_OBJECT, PETSC_NULL_CHARACTER, '-Ntheta', Ntheta, wasSet, ierr)
@@ -75,7 +74,6 @@ program mmc
   call PetscOptionsGetInt(PETSC_NULL_OBJECT, PETSC_NULL_CHARACTER, '-zetaGridScheme', zetaGridScheme, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_OBJECT, PETSC_NULL_CHARACTER, '-L_scaling_option', L_scaling_option, wasSet, ierr)
   call PetscOptionsGetInt(PETSC_NULL_OBJECT, PETSC_NULL_CHARACTER, '-fieldsplit_option', fieldsplit_option, wasSet, ierr)
-  call PetscOptionsGetInt(PETSC_NULL_OBJECT, PETSC_NULL_CHARACTER, '-constraint_option', constraint_option, wasSet, ierr)
 
   if (masterProc) then
      print *,"Ntheta = ",Ntheta
@@ -86,22 +84,31 @@ program mmc
      print *,"thetaGridScheme    = ",thetaGridScheme
      print *,"zetaGridScheme     = ",zetaGridScheme
      print *,"L_scaling_option = ",L_scaling_option
-     print *,"fieldsplit_option = ",fieldsplit_option
-     print *,"constraint_option = ",constraint_option
   end if
 
   call createGrids()
 
-  call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
+  call KSPCreate(PETSC_COMM_WORLD,outer_ksp,ierr)
+  call KSPAppendOptionsPrefix(outer_ksp, 'outer_', ierr)
+  call KSPGetPC(outer_ksp, outer_preconditioner, ierr)
+  call PCSetType(outer_preconditioner, PCSHELL, ierr)
+  call PCShellSetApply(outer_preconditioner, apply_preconditioner, ierr)
+
+  call KSPCreate(PETSC_COMM_WORLD,inner_ksp,ierr)
+  call KSPAppendOptionsPrefix(inner_ksp, 'inner_', ierr)
+  call KSPGetPC(inner_ksp, inner_preconditioner, ierr)
+  call KSPSetType(inner_ksp, KSPPREONLY, ierr)
 
   call VecCreateMPI(PETSC_COMM_WORLD, PETSC_DECIDE, matrixSize, rhs, ierr)
   call VecDuplicate(rhs, solution, ierr)
 
-  call populateMatrix(matrix)
+  call populateMatrix(matrix,1)
+  call populateMatrix(preconditionerMatrix,0)
   call populateRHS(rhs)
 
   print *,"mmc MMMM"
-  call KSPSetOperators(ksp, matrix, matrix, ierr)
+  call KSPSetOperators(outer_ksp, matrix, preconditionerMatrix, ierr)
+  call KSPSetOperators(inner_ksp, matrix, preconditionerMatrix, ierr)
   print *,"mmc NNNN"
 !  call KSPSetComputeRHS(ksp,populateRHS,userContext,ierr)
 !  call KSPSetComputeOperators(ksp,populateMatrix,userContext,ierr)
@@ -109,75 +116,53 @@ program mmc
 !  call KSPMonitorSet(ksp, KSPMonitorDefault, PETSC_NULL_OBJECT, PETSC_NULL_FUNCTION, ierr) !Old syntax
   call PetscViewerAndFormatCreate(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_DEFAULT, vf, ierr)
   !call KSPMonitorSet(ksp, KSPMonitorDefault, vf, PetscViewerAndFormatDestroy, ierr)
-  call KSPMonitorSet(ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
-
-  call KSPGetPC(ksp, pc, ierr)
+  call KSPMonitorSet(outer_ksp, KSPMonitorTrueResidualNorm, vf, PetscViewerAndFormatDestroy, ierr)
 
   if (fieldsplit_option == 0) then
      ! No fieldsplit
-     call PCSetType(pc, PCLU, ierr)
-     call PCFactorSetMatSolverPackage(pc, MATSOLVERMUMPS, ierr)
+     call PCSetType(inner_preconditioner, PCLU, ierr)
+     call PCFactorSetMatSolverPackage(inner_preconditioner, MATSOLVERMUMPS, ierr)
+     print *,"NOT using a fieldsplit to separate off the sources/constraints."
   else
-     ! Do some kind of fieldsplit
-     call PCSetType(pc, PCFIELDSPLIT, ierr)
-     allocate(is_array(matrixSize))
+     ! Set up a fieldsplit to separate off the sources/constraints
+     print *,"Setting up a fieldsplit to separate off the sources/constraints."
 
-     select case (fieldsplit_option)
-     case (1)
-        print *,"Setting up fieldsplit to NOT include the f(1) source/constraint in the f(1) block."
-        ! Note: this method of generating index sets only makes sense for 1 proc.
+     call PCSetType(inner_preconditioner, PCFIELDSPLIT, ierr)
+     call PCFIELDSPLITSetType(inner_preconditioner, PC_COMPOSITE_ADDITIVE, ierr) ! This line sets block Jacobi.
 
-        ! Fieldsplit_0 for the f(0) block
-        do j=1,Ntheta*Nzeta*Nxi
-           is_array(j)=j-1 ! -1 since PETSc uses 0-based indexing
-        end do
-        call ISCreateGeneral(PETSC_COMM_WORLD,Ntheta*Nzeta*Nxi,is_array,PETSC_COPY_VALUES,my_IS,ierr)
-        !call ISView(my_IS,PETSC_VIEWER_STDOUT_WORLD,ierr)
-        call PCFieldSplitSetIS(pc,PETSC_NULL_CHARACTER,my_IS,ierr)
+     ! Create an index set 'IS_all' which represents all indices of the big matrix and vectors, which each processor
+     ! owning the indices it usually owns.
+     !allocate(IS_array(matrixSize))
+     !call VecGetOwnershipRange(solution, first_row_this_proc_owns, last_row_this_proc_owns, ierr)
+     !IS_array(1:last_row_this_proc_owns-first_row_this_proc_owns) = [( j, j = first_row_this_proc_owns, last_row_this_proc_owns-1 )]
+     !call ISCreateGeneral(PETSC_COMM_WORLD,last_row_this_proc_owns-first_row_this_proc_owns,IS_array,PETSC_COPY_VALUES,IS_all,ierr)
+     
+     ! The next 2 lines only work in serial.
+     IS_array = [( j, j=0,matrixSize-3 )]
+     call ISCreateGeneral(PETSC_COMM_WORLD,matrixSize-2,IS_array,PETSC_COPY_VALUES,IS_f0F1,ierr)
+     
+     ! Create an index set 'IS_source_constraint' that represents the indices for the sources and constraints.
+     ! In this index set, the master processor owns everything, unlike the global matrix and vectors in which
+     ! one or more processors at the end of the communicator own the sources/constraints.
+     IS_array(1) = matrixSize-2 ! Remember -1 since PETSc uses 0-based indices
+     IS_array(2) = matrixSize-1 ! Remember -1 since PETSc uses 0-based indices
+     call ISCreateGeneral(PETSC_COMM_WORLD,2,IS_array,PETSC_COPY_VALUES,IS_source_constraint,ierr)
 
-        ! Fieldsplit_1 for everything except the f(0) block
-        do j = 1,Ntheta*Nzeta+2
-           is_array(j) = Ntheta*Nzeta*Nxi+j-1 ! -1 since PETSc uses 0-based indexing
-        end do
-        call ISCreateGeneral(PETSC_COMM_WORLD,Ntheta*Nzeta+2,is_array,PETSC_COPY_VALUES,my_IS,ierr)
-        !call ISView(my_IS,PETSC_VIEWER_STDOUT_WORLD,ierr)
-        call PCFieldSplitSetIS(pc,PETSC_NULL_CHARACTER,my_IS,ierr)
-     case (2)
-        print *,"Setting up fieldsplit to include the f(1) source/constraint in the f(1) block."
-        ! Note: this method of generating index sets only makes sense for 1 proc.
+     call PCFieldSplitSetIS(inner_preconditioner,'f0F1',IS_f0F1,ierr)
+     call PCFieldSplitSetIS(inner_preconditioner,'constraints',IS_source_constraint,ierr)
 
-        ! Fieldsplit_0 for the f(0) block AND the f(0) source/constraint
-        do j=1,Ntheta*Nzeta*Nxi
-           is_array(j)=j-1 ! -1 since PETSc uses 0-based indexing
-        end do
-        is_array(Ntheta*Nzeta*Nxi+1) = matrixSize-2
-        call ISCreateGeneral(PETSC_COMM_WORLD,Ntheta*Nzeta*Nxi+1,is_array,PETSC_COPY_VALUES,my_IS,ierr)
-        !call ISView(my_IS,PETSC_VIEWER_STDOUT_WORLD,ierr)
-        call PCFieldSplitSetIS(pc,PETSC_NULL_CHARACTER,my_IS,ierr)
-
-        ! Fieldsplit_1 for the F(1) block and the F(1) source/constraint
-        do j = 1,Ntheta*Nzeta
-           is_array(j)=Ntheta*Nzeta*Nxi+j-1 ! -1 since PETSc uses 0-based indexing
-        end do
-        is_array(Ntheta*Nzeta+1) = matrixSize-1
-        call ISCreateGeneral(PETSC_COMM_WORLD,Ntheta*Nzeta+1,is_array,PETSC_COPY_VALUES,my_IS,ierr)
-        !call ISView(my_IS,PETSC_VIEWER_STDOUT_WORLD,ierr)
-        call PCFieldSplitSetIS(pc,PETSC_NULL_CHARACTER,my_IS,ierr)
-     case default
-        print *,"Error! Invalid fieldsplit_option"
-        stop
-     end select
   end if
-  call KSPSetFromOptions(ksp,ierr)
+  call KSPSetFromOptions(outer_ksp,ierr)
+  call KSPSetFromOptions(inner_ksp,ierr)
 
-  !call KSPSetUp(ksp, ierr)
-  !call KSPView(ksp, PETSC_VIEWER_STDOUT_WORLD,ierr)
+  call KSPSetUp(inner_ksp, ierr)
+  call KSPView(inner_ksp, PETSC_VIEWER_STDOUT_WORLD,ierr)
 
   if (masterProc) then
      print *,"Beginning solve..."
   end if
   call system_clock(clockStart, clockRate)
-  call KSPSolve(ksp, rhs, solution, ierr)
+  call KSPSolve(outer_ksp, rhs, solution, ierr)
   if (masterProc) then
      print *,"Done!"
   end if
@@ -189,7 +174,7 @@ program mmc
 
   call diagnostics(solution)
 
-  call KSPDestroy(ksp,ierr)
+  call KSPDestroy(outer_ksp,ierr)
 
   call PETScFinalize(ierr)
 

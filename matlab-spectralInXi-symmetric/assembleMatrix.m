@@ -3,8 +3,12 @@ function returnStruct = assembleMatrix(resolutionParameters, nu_prime, E, geomet
 Ntheta = resolutionParameters.Ntheta;
 Nzeta = resolutionParameters.Nzeta;
 Nxi = resolutionParameters.Nxi;
+includeConstraints = resolutionParameters.includeConstraints;
 
-matrixSize = Ntheta*Nzeta*Nxi + Ntheta*Nzeta + 2;
+matrixSize = Ntheta*Nzeta*Nxi + Ntheta*Nzeta;
+if includeConstraints
+    matrixSize = matrixSize + 2;
+end
 
 nu_hat = nu_prime / (geometryParameters.G + geometryParameters.iota * geometryParameters.I);
 
@@ -60,8 +64,8 @@ resetSparseCreator()
 % ***************************************************************************
 
 Ls = (1:Nxi)-1;
-%L_scaling = ones(size(Ls));
-L_scaling = sqrt((2*Ls+1)/2);
+L_scaling = ones(size(Ls));
+%L_scaling = sqrt((2*Ls+1)/2);
 
 %assert(abs(L_scaling(2)^2 - 3*L_scaling(1)^2) < 1e-12)
 
@@ -288,22 +292,23 @@ matrix(indices_for_L0 + Ntheta*Nzeta*Nxi,:) = stuff_to_add';
 % Handle sources and constraints
 % ***************************************************************************
 
-% These next 2 lines could be swapped. Would it make a difference?
-rowIndex1 = matrixSize-1;
-rowIndex2 = matrixSize;
-L = 0;
-for itheta=1:Ntheta
-    stuff_to_add = (thetaWeight * zetaWeight / VPrime) * sqrt_g(itheta,:);
-
-    colIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
-    addSparseBlock(rowIndex1, colIndices, stuff_to_add)
-    addSparseBlock(colIndices, rowIndex1, stuff_to_add')
-
-    colIndices = colIndices + Ntheta*Nzeta*Nxi;
-    addSparseBlock(rowIndex2, colIndices, stuff_to_add)
-    addSparseBlock(colIndices, rowIndex2, stuff_to_add')
+if includeConstraints
+    % These next 2 lines could be swapped. Would it make a difference?
+    rowIndex1 = matrixSize-1;
+    rowIndex2 = matrixSize;
+    L = 0;
+    for itheta=1:Ntheta
+        stuff_to_add = (thetaWeight * zetaWeight / VPrime) * sqrt_g(itheta,:);
+        
+        colIndices = getIndex(itheta,1:Nzeta,L+1,resolutionParameters);
+        addSparseBlock(rowIndex1, colIndices, stuff_to_add)
+        addSparseBlock(colIndices, rowIndex1, stuff_to_add')
+        
+        colIndices = colIndices + Ntheta*Nzeta*Nxi;
+        addSparseBlock(rowIndex2, colIndices, stuff_to_add)
+        addSparseBlock(colIndices, rowIndex2, stuff_to_add')
+    end
 end
-
 
 % -----------------------------------------
 % Finalize the matrix
@@ -393,6 +398,7 @@ returnStruct = struct(...
     'B',B,...
     'dBdtheta',dBdtheta,...
     'dBdzeta',dBdzeta,...
+    'sqrt_g',sqrt_g,...
     'L_scaling',L_scaling,...
     'matrix',matrix,...
     'V',V,...

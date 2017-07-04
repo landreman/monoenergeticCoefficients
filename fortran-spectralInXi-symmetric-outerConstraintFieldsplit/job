@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#mpiexec -n 1 ./mmc -options_left -ksp_view
+
+#mpiexec -n 3 ./mmc -options_left -ksp_view -pc_factor_mat_solver_package mumps
+
+#mpiexec -n 4 ./mmc -options_left -ksp_view -pc_factor_mat_solver_package mumps -mat_mumps_icntl_4 2
+
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -pc_factor_mat_solver_package mumps -L_scaling_option 1
+
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 \
+#  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -ksp_max_it 3 -pc_fieldsplit_schur_precondition selfp \
+#    -fieldsplit_0_pc_type lu -fieldsplit_0_pc_factor_mat_solver_package mumps -fieldsplit_1_pc_type lu -fieldsplit_1_pc_factor_mat_solver_package mumps \
+#    -pc_fieldsplit_schur_fact_type diag
+
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 \
+#  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -ksp_max_it 3 -pc_fieldsplit_type schur -fieldsplit_1_pc_type lsc \
+#    -fieldsplit_0_pc_type lu -fieldsplit_0_pc_factor_mat_solver_package mumps -pc_fieldsplit_schur_precondition self
+
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 \
+#  -fieldsplit_option 2 -ksp_max_it 3 -pc_fieldsplit_schur_precondition full -pc_fieldsplit_type schur\
+#    -fieldsplit_0_pc_type lu -fieldsplit_0_pc_factor_mat_solver_package mumps -fieldsplit_1_pc_type lu -fieldsplit_1_pc_factor_mat_solver_package mumps
+
+# Direct solve with mumps
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 0
+
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_f0F1_pc_type lu -inner_fieldsplit_f0F1_pc_factor_mat_solver_package mumps -inner_fieldsplit_constraints_pc_type none \
+#    -outer_ksp_max_it 10 -inner_fieldsplit_constraints_ksp_type richardson -inner_fieldsplit_constraints_ksp_max_it 1 -inner_ksp_monitor 
+
+./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+    -inner_fieldsplit_f0F1_pc_type lu -inner_fieldsplit_f0F1_pc_factor_mat_solver_package mumps -inner_fieldsplit_constraints_pc_type jacobi \
+    -outer_ksp_max_it 10 -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_ksp_max_it 1 -inner_ksp_monitor \
+    -outer_ksp_type fgmres

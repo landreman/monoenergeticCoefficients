@@ -28,7 +28,73 @@
 #    -inner_fieldsplit_f0F1_pc_type lu -inner_fieldsplit_f0F1_pc_factor_mat_solver_package mumps -inner_fieldsplit_constraints_pc_type none \
 #    -outer_ksp_max_it 10 -inner_fieldsplit_constraints_ksp_type richardson -inner_fieldsplit_constraints_ksp_max_it 1 -inner_ksp_monitor 
 
+# Splitting off constraints, with direct solve on the remainder. Converges in 1 step.
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_f0F1_pc_type lu -inner_fieldsplit_f0F1_pc_factor_mat_solver_package mumps -inner_fieldsplit_constraints_pc_type jacobi \
+#    -outer_ksp_max_it 10 -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_ksp_max_it 1 -inner_ksp_monitor \
+#    -outer_ksp_type fgmres
+
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_1_pc_type lsc \
+#    -inner_fieldsplit_f0F1_fieldsplit_1_lsc_pc_type lu -inner_fieldsplit_constraints_pc_type jacobi \
+#    -outer_ksp_max_it 10 -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_ksp_max_it 1 -inner_ksp_monitor \
+#    -outer_ksp_type fgmres
+
+# Try preconditioning with [A, 0; 0, I]. Takes 70 iterations.
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type additive \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+#    -outer_ksp_max_it 100  -outer_ksp_type fgmres
+
+# Try preconditioning with Block Seidel based on [A, 0; 0, I] (Same as last case, but replace fieldsplit_type additive -> multiplicative).
+# Takes 25 iterations.
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type multiplicative \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+#    -outer_ksp_max_it 100  -outer_ksp_type fgmres
+
+# Try preconditioning with Block Seidel based on [A, 0; 0, I] (Same as last case, but replace fieldsplit_type additive -> symmetric_multiplicative).
+# Takes 25 iterations.
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type symmetric_multiplicative \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+#    -outer_ksp_max_it 100  -outer_ksp_type fgmres
+
+# Switching to high-order derivatives. Takes just 27 iterations!
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 10 -zetaGridScheme 10 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type multiplicative \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+#    -outer_ksp_max_it 100  -outer_ksp_type fgmres
+
+# Lower collisionality. Low order derivatives. Takes 37 iterations.
+#./mmc -Ntheta 15 -Nzeta 15 -Nxi 30 -nu 0.01 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type multiplicative \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+#    -outer_ksp_max_it 100  -outer_ksp_type fgmres
+
+# Lower collisionality. Low order derivatives. Converges, but slowly.
+#./mmc -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type multiplicative \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_0_pc_factor_mat_solver_package mumps -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+#    -outer_ksp_max_it 100  -outer_ksp_type fgmres
+
+# Low collisionality. High order derivatives. Converges, but slowly.
+#./mmc -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 0.001 -E 0 -thetaGridScheme 10 -zetaGridScheme 10 -L_scaling_option 1 -fieldsplit_option 1 \
+#    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+#    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type multiplicative \
+#    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type lu -inner_fieldsplit_f0F1_fieldsplit_0_pc_factor_mat_solver_package mumps -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+#    -outer_ksp_max_it 100  -outer_ksp_type fgmres
+
+# Highish nu, gamg
 ./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -fieldsplit_option 1 \
-    -inner_fieldsplit_f0F1_pc_type lu -inner_fieldsplit_f0F1_pc_factor_mat_solver_package mumps -inner_fieldsplit_constraints_pc_type jacobi \
-    -outer_ksp_max_it 10 -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_ksp_max_it 1 -inner_ksp_monitor \
-    -outer_ksp_type fgmres
+    -inner_fieldsplit_constraints_ksp_type preonly -inner_fieldsplit_constraints_pc_type jacobi \
+    -inner_fieldsplit_f0F1_pc_type fieldsplit -inner_fieldsplit_f0F1_pc_fieldsplit_detect_saddle_point -inner_fieldsplit_f0F1_pc_fieldsplit_type multiplicative \
+    -inner_fieldsplit_f0F1_fieldsplit_0_pc_type ilu -inner_fieldsplit_f0F1_fieldsplit_1_pc_type jacobi \
+    -outer_ksp_max_it 100  -outer_ksp_type fgmres

@@ -29,8 +29,10 @@ subroutine populateMatrix(matrix)
   PetscInt :: rowIndex, colIndex, index
   PetscScalar, dimension(:,:), allocatable :: ddthetaToUse, ddzetaToUse
   PetscScalar :: temp, factor
-  Vec :: real_collision_operator, temp_vec
+  Vec :: real_collision_operator, temp_vec, null_vecs(2)
   Mat :: temp_mat, temp_mat2
+  MatNullSpace :: null_space
+  PetscBool :: null_space_test_result
 
   if (masterProc) then
      print *,"Entering populateMatrix."
@@ -353,6 +355,50 @@ subroutine populateMatrix(matrix)
   ! Also add the transpose
   call MatTranspose(temp_mat2, MAT_INITIAL_MATRIX, temp_mat, ierr)
   call MatAXPY(matrix, one, temp_mat, DIFFERENT_NONZERO_PATTERN, ierr)
+
+  if (constraint_option==2) then
+     if (masterProc) print *,"Attaching a null space to the matrix."
+     call VecDuplicate(weights_vec, null_vecs(1), ierr)
+     call VecDuplicate(weights_vec, null_vecs(2), ierr)
+     call VecSet(null_vecs(1), zero, ierr)
+     call VecSet(null_vecs(2), zero, ierr)
+     if (masterProc) then
+        L = 0
+        do itheta = 1,Ntheta
+           do izeta = 1,Nzeta
+              index = getIndex(itheta,izeta,L+1)
+              call VecSetValue(null_vecs(1), index, one, INSERT_VALUES, ierr)
+              call VecSetValue(null_vecs(2), index + Ntheta*Nzeta*Nxi, one, INSERT_VALUES, ierr)
+           end do
+        end do
+     end if
+     call VecAssemblyBegin(null_vecs(1), ierr)
+     call VecAssemblyBegin(null_vecs(2), ierr)
+     call VecAssemblyEnd(null_vecs(1), ierr)
+     call VecAssemblyEnd(null_vecs(2), ierr)
+
+     !print *,"Here comes null_vecs(1):"
+     !call VecView(null_vecs(1), PETSC_VIEWER_STDOUT_WORLD,ierr)
+     call PetscViewerASCIIOpen(PETSC_COMM_WORLD, "null_vecs_1.dat", viewer, ierr)
+     call PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INDEX, ierr)
+     call VecView(null_vecs(1), viewer, ierr)
+     call PetscViewerDestroy(viewer, ierr)
+
+     !print *,"Here comes null_vecs(2):"
+     !call VecView(null_vecs(2), PETSC_VIEWER_STDOUT_WORLD,ierr)
+     call PetscViewerASCIIOpen(PETSC_COMM_WORLD, "null_vecs_2.dat", viewer, ierr)
+     call PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INDEX, ierr)
+     call VecView(null_vecs(2), viewer, ierr)
+     call PetscViewerDestroy(viewer, ierr)
+
+     call MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_FALSE, 2, null_vecs, null_space, ierr)
+     call MatNullSpaceTest(null_space, matrix, null_space_test_result, ierr)
+     if (masterProc) print *,"Result of null space test:",null_space_test_result,null_space_test_result.eqv.PETSC_TRUE
+     call MatSetNullSpace(matrix, null_space, ierr)
+     call MatSetTransposeNullSpace(matrix, null_space, ierr)
+  else
+     if (masterProc) print *,"NOT attaching a null space to the matrix."
+  end if
 
 !!$  ! The matrix has a 1D null space, with the null vector corresponding to a constant:
 !!$  call MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_TRUE,0,0,nullspace,ierr)

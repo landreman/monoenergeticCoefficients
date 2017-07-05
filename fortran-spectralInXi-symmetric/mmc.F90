@@ -88,6 +88,17 @@ program mmc
      print *,"L_scaling_option = ",L_scaling_option
      print *,"fieldsplit_option = ",fieldsplit_option
      print *,"constraint_option = ",constraint_option
+     select case (constraint_option)
+     case (0)
+        print *,"The 2 source columns and 2 constraint rows are NOT included, and a null space is NOT attached."
+     case (1)
+        print *,"The 2 source columns and 2 constraint rows ARE included, and a null space is NOT attached."
+     case (2)
+        print *,"The 2 source columns and 2 constraint rows are NOT included, and a null space IS attached."
+     case default
+        print *,"Invalid constraint_option!"
+        stop
+     end select
   end if
 
   call createGrids()

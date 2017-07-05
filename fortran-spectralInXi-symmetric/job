@@ -21,8 +21,26 @@
 #  -fieldsplit_option 2 -ksp_max_it 3 -pc_fieldsplit_schur_precondition full -pc_fieldsplit_type schur\
 #    -fieldsplit_0_pc_type lu -fieldsplit_0_pc_factor_mat_solver_package mumps -fieldsplit_1_pc_type lu -fieldsplit_1_pc_factor_mat_solver_package mumps
 
-#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -constraint_option 0
+# Direct solver
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -constraint_option 0 -ksp_type fgmres
 
-./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -constraint_option 0 \
-  -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type schur -fieldsplit_1_pc_type lsc \
-    -fieldsplit_1_lsc_pc_type lu -fieldsplit_0_pc_type lu -pc_fieldsplit_schur_precondition self
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -constraint_option 0 \
+#  -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type schur -fieldsplit_1_pc_type lsc \
+#    -fieldsplit_1_lsc_pc_type lu -fieldsplit_0_pc_type lu -pc_fieldsplit_schur_precondition self
+
+# Try preconditioning with [A, 0; 0, I]. Takes 71 or 67 iterations for constraint_option 0 or 2.
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -ksp_type fgmres -constraint_option 2 \
+#  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type additive -fieldsplit_0_pc_type lu -fieldsplit_1_pc_type jacobi \
+#  -ksp_max_it 100 -help
+
+# Try preconditioning with Block Seidel based on [A, 0; 0, I] (Same as last case, but replace fieldsplit_type additive -> multiplicative).
+# Takes 49 or 50 iterations for constraint_option 0 or 2.
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -ksp_type fgmres -constraint_option 0 \
+#  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type multiplicative -fieldsplit_0_pc_type lu -fieldsplit_1_pc_type jacobi \
+#  -ksp_max_it 100 -help
+
+# Try preconditioning with Block Seidel based on [A, 0; 0, I] (Same as last case, but replace fieldsplit_type additive -> symmetric_multiplicative).
+# Takes 59 or 56 iterations for constraint_option 0 or 2.
+./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -ksp_type fgmres -constraint_option 2 \
+  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type symmetric_multiplicative -fieldsplit_0_pc_type lu -fieldsplit_1_pc_type jacobi \
+  -ksp_max_it 100 -help

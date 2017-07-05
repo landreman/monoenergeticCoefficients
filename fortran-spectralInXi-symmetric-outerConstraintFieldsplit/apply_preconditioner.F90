@@ -182,8 +182,8 @@
           end if
           call MatCreateVecs(constraints_times_sources_Mat, PETSC_NULL_OBJECT, temp_Vec_1, ierr) ! Create temp_Vec_1 of the appropriate size.
           
-          if (masterProc) print *,"Here is temp_Vec_1:"
-          call VecView(temp_Vec_1, PETSC_VIEWER_STDOUT_WORLD,ierr)
+          !if (masterProc) print *,"Here is temp_Vec_1:"
+          !call VecView(temp_Vec_1, PETSC_VIEWER_STDOUT_WORLD,ierr)
 
           call KSPSolve(constraints_times_sources_KSP, s_Vec, temp_Vec_1, ierr) ! Apply (c p b)^{-1}
           call KSPGetConvergedReason(constraints_times_sources_KSP, reason, ierr)
@@ -216,7 +216,7 @@
              if (masterProc) print *,"Here is (c q b)^{-1} c q r:"
              call VecView(temp_Vec_1, PETSC_VIEWER_STDOUT_WORLD, ierr)
           end if
-          print *,myRank,'AAAA'
+          !print *,myRank,'AAAA'
           call VecDuplicate(input_Vec, temp_Vec_2, ierr) ! Create temp_Vec_2 of the appropriate size.
           call MatMult(sources_Mat, temp_Vec_1, temp_Vec_2, ierr) ! Multiply by b to get b (c q b)^{-1} c q r. Result is now in temp_Vec_2.
           call VecDestroy(temp_Vec_1, ierr)
@@ -224,11 +224,11 @@
           call VecWAXPY(temp_Vec_1, -one, temp_Vec_2, input_Vec, ierr) ! Now temp_Vec_1 holds (I - b (c q b)^{-1} c q) r.
           call VecDestroy(temp_Vec_2, ierr)
           call VecDuplicate(input_Vec, ainv_times_stuff_Vec, ierr) ! Create ainv_times_stuff_Vec of the appropriate size. 
-          print *,myRank,'MMMMM'
+          !print *,myRank,'MMMMM'
           ! VVVVVVV  Next comes the big solve, involving multigrid. VVVVVVVVV
           call KSPSolve(inner_KSP, temp_Vec_1, ainv_times_stuff_Vec, ierr)
           ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          print *,myRank,'NNNN'
+          !print *,myRank,'NNNN'
           call KSPGetConvergedReason(inner_KSP, reason, ierr)
           if (reason <= 0 .and. masterProc) print *,"WARNING: inner KSP failed with reason",reason
           call MatCreateVecs(constraints_times_sources_Mat, PETSC_NULL_OBJECT, temp_Vec_2, ierr) ! Create temp_Vec_2 of the appropriate size.

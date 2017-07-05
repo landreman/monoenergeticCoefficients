@@ -22,7 +22,7 @@ module variables
   PetscScalar, parameter :: pi = 3.14159265358979d+0
   PetscScalar, parameter :: sqrtpi = 1.77245385090552d+0
   PetscScalar, parameter :: one = 1.0d+0
-  PetscScalar, parameter :: zero = 1.0d+0
+  PetscScalar, parameter :: zero = 0.0d+0
 
   PetscInt :: thetaGridScheme, zetaGridScheme
 

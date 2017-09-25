@@ -5,33 +5,36 @@
 #include <petsc/finclude/petscdmdadef.h>
 #endif
 
-subroutine createGrids()
+  subroutine createGrids()
 
-  use petscdmda
-  use variables
+    use petscdmda
+    use variables
 
-  implicit none
+    implicit none
 
-  PetscScalar, dimension(:), allocatable :: theta_preconditioner, thetaWeights_preconditioner
-  PetscScalar, dimension(:), allocatable :: zeta_preconditioner, zetaWeights_preconditioner
-  PetscScalar, dimension(:,:), allocatable :: d2dtheta2
-  PetscScalar, dimension(:,:), allocatable :: d2dzeta2
-  PetscScalar, dimension(:,:), allocatable :: d2dy2, ddy, ddy_plus, ddy_minus
-  PetscScalar, dimension(:), allocatable :: y_dummy, yWeights_dummy, yWeights, dxi_dy, d2xi_dy2
-  PetscInt :: scheme, ixi, quadrature_option, derivative_option_plus, derivative_option_minus, derivative_option
-  PetscInt :: j, k
-  PetscScalar :: zetaMax
-  DM :: myDM
-  integer, parameter :: bufferLength = 200
-  character(len=bufferLength) :: procAssignments
-  integer :: tag, dummy(1)
-  integer :: status(MPI_STATUS_SIZE)
-  logical :: call_uniform_diff_matrices
-  PetscErrorCode :: ierr
+    PetscScalar, dimension(:), allocatable :: theta_preconditioner, thetaWeights_preconditioner
+    PetscScalar, dimension(:), allocatable :: zeta_preconditioner, zetaWeights_preconditioner
+    PetscScalar, dimension(:,:), allocatable :: d2dtheta2
+    PetscScalar, dimension(:,:), allocatable :: d2dzeta2
+    PetscScalar, dimension(:,:), allocatable :: d2dy2, ddy, ddy_plus, ddy_minus
+    PetscScalar, dimension(:), allocatable :: y_dummy, yWeights_dummy, yWeights, dxi_dy, d2xi_dy2
+    PetscInt :: scheme, ixi, quadrature_option, derivative_option_plus, derivative_option_minus, derivative_option
+    PetscInt :: j, k
+    PetscScalar :: zetaMax
+    DM :: myDM
+    integer, parameter :: bufferLength = 200
+    character(len=bufferLength) :: procAssignments
+    integer :: tag, dummy(1)
+    integer :: status(MPI_STATUS_SIZE)
+    logical :: call_uniform_diff_matrices
+    PetscErrorCode :: ierr
+    PetscScalar :: dalpha
+    PetscScalar, dimension(:), allocatable :: alpha, alpha_dummy, alphaWeights_dummy
+    PetscScalar, dimension(:,:), allocatable :: ddalpha_dummy, d2dalpha2_dummy, ddalpha_extended, d2dalpha2_extended, ddalpha, d2dalpha2
 
-  matrixSize = Ntheta*Nzeta*Nxi
-  if (constraint_option==1) matrixSize = matrixSize + 1
-  if (masterProc) print *,"matrixSize:",matrixSize
+    matrixSize = Ntheta*Nzeta*Nxi
+    if (constraint_option==1) matrixSize = matrixSize + 1
+    if (masterProc) print *,"matrixSize:",matrixSize
 
     ! *******************************************************************************
     ! *******************************************************************************
@@ -101,8 +104,8 @@ subroutine createGrids()
     write (procAssignments,fmt="(a,i4,a,i3,a,i3,a,i3,a,i3,a)") "Processor ",myRank," owns theta indices ",ithetaMin," to ",ithetaMax,&
          " and zeta indices ",izetaMin," to ",izetaMax
 
-!    call PetscSynchronizedPrintf(PETSC_COMM_WORLD, procAssignments, ierr)
-!    call PetscSynchronizedFlush(PETSC_COMM_WORLD, ierr)
+    !    call PetscSynchronizedPrintf(PETSC_COMM_WORLD, procAssignments, ierr)
+    !    call PetscSynchronizedFlush(PETSC_COMM_WORLD, ierr)
 
     ! PETSc's synchronized printing functions seem buggy, so here I've implemented my own version:
     dummy = 0
@@ -411,7 +414,7 @@ subroutine createGrids()
           end if
           derivative_option_plus = 0
           derivative_option_minus = derivative_option_plus
-          
+
        case (3)
           if (masterProc) then
              print *,"d/dzeta derivatives discretized using centered finite differences:"
@@ -419,7 +422,7 @@ subroutine createGrids()
           end if
           derivative_option_plus = 10
           derivative_option_minus = derivative_option_plus
-          
+
        case (4)
           if (masterProc) then
              print *,"d/dzeta derivatives discretized using upwinded finite differences:"
@@ -427,7 +430,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 30
           derivative_option_minus = 40
-          
+
        case (5)
           if (masterProc) then
              print *,"d/dzeta derivatives discretized using upwinded finite differences:"
@@ -435,7 +438,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 50
           derivative_option_minus = 60
-          
+
        case (6)
           if (masterProc) then
              print *,"d/dzeta derivatives discretized using upwinded finite differences:"
@@ -443,7 +446,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 80
           derivative_option_minus = 90
-          
+
        case (7)
           if (masterProc) then
              print *,"d/dzeta derivatives discretized using upwinded finite differences:"
@@ -451,7 +454,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 100
           derivative_option_minus = 110
-          
+
        case (8)
           if (masterProc) then
              print *,"d/dzeta derivatives discretized using upwinded finite differences:"
@@ -459,7 +462,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 120
           derivative_option_minus = 130
-          
+
        case (10)
           if (masterProc) then
              print *,"d/dzeta derivatives discretized using partially upwinded finite differences:"
@@ -485,7 +488,7 @@ subroutine createGrids()
           end if
           stop
        end select
-       
+
        if (call_uniform_diff_matrices) then
           quadrature_option = 0
           call uniformDiffMatrices(Nzeta, zero, zetaMax, &
@@ -507,7 +510,7 @@ subroutine createGrids()
           ddzeta_plus_preconditioner = 0
           ddzeta_minus_preconditioner = 0
           call_uniform_diff_matrices = .false.
-          
+
        case (100)
           if (masterProc) then
              print *,"d/dzeta matrices are the same in the preconditioner."
@@ -515,7 +518,7 @@ subroutine createGrids()
           ddzeta_plus_preconditioner  = ddzeta_plus
           ddzeta_minus_preconditioner = ddzeta_minus
           call_uniform_diff_matrices = .false.          
-          
+
        case (2)
           if (masterProc) then
              print *,"Preconditioner d/dzeta derivatives discretized using centered finite differences:"
@@ -523,7 +526,7 @@ subroutine createGrids()
           end if
           derivative_option_plus = 0
           derivative_option_minus = derivative_option_plus
-          
+
        case (3)
           if (masterProc) then
              print *,"Preconditioner d/dzeta derivatives discretized using centered finite differences:"
@@ -539,7 +542,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 30
           derivative_option_minus = 40
-          
+
        case (5)
           if (masterProc) then
              print *,"Preconditioner d/dzeta derivatives discretized using upwinded finite differences:"
@@ -547,7 +550,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 50
           derivative_option_minus = 60
-          
+
        case (6)
           if (masterProc) then
              print *,"Preconditioner d/dzeta derivatives discretized using upwinded finite differences:"
@@ -555,7 +558,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 80
           derivative_option_minus = 90
-          
+
        case (7)
           if (masterProc) then
              print *,"Preconditioner d/dzeta derivatives discretized using upwinded finite differences:"
@@ -563,7 +566,7 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 100
           derivative_option_minus = 110
-          
+
        case (8)
           if (masterProc) then
              print *,"Preconditioner d/dzeta derivatives discretized using upwinded finite differences:"
@@ -571,14 +574,14 @@ subroutine createGrids()
           end if
           derivative_option_plus  = 120
           derivative_option_minus = 130
-          
+
        case default
           if (masterProc) then
              print *,"Error! Invalid setting for zeta_derivative_option:",zeta_derivative_option
           end if
           stop
        end select
-       
+
        if (call_uniform_diff_matrices) then
           quadrature_option = 0
           call uniformDiffMatrices(Nzeta, zero, zetaMax, &
@@ -600,7 +603,7 @@ subroutine createGrids()
              end do
           end do
        end if
-       
+
     end if
 
     zetaWeights = zetaWeights * NPeriods
@@ -951,325 +954,665 @@ subroutine createGrids()
     allocate(ddy_plus(Nxi,Nxi))
     allocate(ddy_minus(Nxi,Nxi))
 
-    ! *******************************************************************************
-    ! Set up uniform y grid and the associated nonuniform xi grid
-    ! *******************************************************************************
 
-    derivative_option = 2
-    call uniformDiffMatrices(Nxi, -one, one, derivative_option, xi_quadrature_option, y, yWeights, ddy, d2dy2)
-    do j=1,Nxi
-       xi(j) = compute_xi_from_y(y(j))
-       dxi_dy(j) = compute_dxi_dy(y(j))
-       d2xi_dy2(j) = compute_d2xi_dy2(y(j))
-    end do
-    xiWeights = dxi_dy * yWeights
-    print *,"sum(xiWeights):",sum(xiWeights)
-    print *,"sum(xiWeights*xi):",sum(xiWeights*xi)
-    print *,"sum(xiWeights*xi*xi):",sum(xiWeights*xi*xi)
-    if (abs(sum(xiWeights)-2) > 1.0e-2) then
-       print *,"Error! xiWeights do not sum to 2!"
-       print *,"xiWeights:",xiWeights
-       print *,"Sum is",sum(xiWeights)
-       stop
-    end if
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Beginning of new xi grid
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! *******************************************************************************
-    ! Handle d/dxi for the pitch angle scattering operator in the main matrix.
-    ! *******************************************************************************
+    if (xi_derivative_option >= 1000 .and. xi_derivative_option < 2000) then
 
-    select case (pitch_angle_scattering_option)
+       if (preconditioner_xi_derivative_option < 1000 .or. preconditioner_xi_derivative_option >= 2000) &
+            stop "Incompatible xi_derivative_option and preconditioner_xi_derivative_option"
+       if (pitch_angle_scattering_option < 1000 .or. pitch_angle_scattering_option >= 2000) &
+            stop "Incompatible xi_derivative_option and pitch_angle_scattering_option"
+       if (preconditioner_pitch_angle_scattering_option < 1000 .or. preconditioner_pitch_angle_scattering_option >= 2000) &
+            stop "Incompatible xi_derivative_option and preconditioner_pitch_angle_scattering_option"
 
-    case (2)
+       allocate(alpha(Nxi*2))
+       allocate(alpha_dummy(Nxi*2))
+       allocate(alphaWeights_dummy(Nxi*2))
+       allocate(ddalpha_dummy(Nxi*2,Nxi*2))
+       allocate(d2dalpha2_dummy(Nxi*2,Nxi*2))
+       allocate(ddalpha_extended(Nxi*2,Nxi*2))
+       allocate(d2dalpha2_extended(Nxi*2,Nxi*2))
+       allocate(ddalpha(Nxi,Nxi))
+       allocate(d2dalpha2(Nxi,Nxi))
+
+       alpha = [( (j - 1.0d+0)*pi/Nxi, j=1, Nxi*2 )]
+       dalpha = alpha(2) - alpha(1)
+       alpha = alpha + 0.5d+0 * dalpha ! Shift by half a grid point
+       xi = -cos(alpha(1:Nxi))
+       if (masterProc) print *,"alpha:",alpha
+       if (masterProc) print *,"xi:",xi
+
+       ! Compute shifted Clenshaw-Curtis weights
+       xiWeights = dalpha*2/pi ! a_0 term
+       do k = 1,(Nxi/2)
+          xiWeights = xiWeights + dalpha*2/(1.0d+0 - 4*k*k)*2/pi*cos(2*k*alpha(1:Nxi)) ! a_k term
+       end do
+
        if (masterProc) then
-          print *,"Pitch angle scattering operator discretized using centered finite differences:"
-          print *,"   1 point on either side."
+          print *,"sum(xiWeights):",sum(xiWeights)
+          print *,"sum(xiWeights*xi):",sum(xiWeights*xi)
+          print *,"sum(xiWeights*xi*xi):",sum(xiWeights*xi*xi)
        end if
+       if (abs(sum(xiWeights)-2) > 1.0e-2) then
+          if (masterProc) then
+             print *,"Error! xiWeights do not sum to 2!"
+             print *,"xiWeights:",xiWeights
+             print *,"Sum is",sum(xiWeights)
+          end if
+          stop
+       end if
+
+       ! *******************************************************************************
+       ! Handle d/dxi for the mirror term in the main matrix.
+       ! *******************************************************************************
+
+       select case (xi_derivative_option)
+
+       case (1002)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option_plus = 0
+          derivative_option_minus = derivative_option_plus
+
+       case (1003)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option_plus  = 10
+          derivative_option_minus = derivative_option_plus
+
+       case (1004)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 1 point on the other side."
+          end if
+          derivative_option_plus  = 30
+          derivative_option_minus = 40
+
+       case (1005)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 50
+          derivative_option_minus = 60
+
+       case (1006)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 80
+          derivative_option_minus = 90
+
+       case (1007)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 3 points on the other side."
+          end if
+          derivative_option_plus  = 100
+          derivative_option_minus = 110
+
+       case (1008)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   2 point on one side, 3 points on the other side."
+          end if
+          derivative_option_plus  = 120
+          derivative_option_minus = 130
+
+       case default
+          print *,"Error! Invalid setting for xi_derivative_option:",xi_derivative_option
+          stop
+       end select
+
+       if (masterProc) print *,"   Uniform grid in alpha, half mesh."
+
+
+       call uniformDiffMatrices(Nxi*2, zero, 2*pi, derivative_option_plus,  xi_quadrature_option, alpha_dummy, alphaWeights_dummy, ddalpha_extended, d2dalpha2_dummy)       
+       ddalpha = ddalpha_extended(1:Nxi, 1:Nxi) + ddalpha_extended(1:Nxi, (2*Nxi):(Nxi+1):(-1))
+       do ixi = 1,Nxi
+          ddxi_plus(ixi,:) = ddalpha(ixi, 1:Nxi) / sin(alpha(ixi))
+       end do
+
+       call uniformDiffMatrices(Nxi*2, zero, 2*pi, derivative_option_minus, xi_quadrature_option, alpha_dummy, alphaWeights_dummy, ddalpha_extended, d2dalpha2_dummy)
+       ddalpha = ddalpha_extended(1:Nxi, 1:Nxi) + ddalpha_extended(1:Nxi, (2*Nxi):(Nxi+1):(-1))
+       do ixi = 1,Nxi
+          ddxi_minus(ixi,:) = ddalpha(ixi, 1:Nxi) / sin(alpha(ixi))
+       end do
+
+
+       ! *******************************************************************************
+       ! Handle d/dxi for the mirror term in the preconditioner matrix.
+       ! *******************************************************************************
+
+       call_uniform_diff_matrices = .true.
+       select case (abs(preconditioner_xi_derivative_option))
+       case (1000)
+          if (masterProc) then
+             print *,"d/dxi terms are dropped in the preconditioner."
+          end if
+          ddxi_plus_preconditioner = 0
+          ddxi_minus_preconditioner = 0
+          call_uniform_diff_matrices = .false.
+
+       case (1100)
+          if (masterProc) then
+             print *,"d/dxi matrices are the same in the preconditioner."
+          end if
+          ddxi_plus_preconditioner  = ddxi_plus
+          ddxi_minus_preconditioner = ddxi_minus
+          call_uniform_diff_matrices = .false.
+
+       case (1002)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option_plus = 0
+          derivative_option_minus = derivative_option_plus
+
+       case (1003)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option_plus  = 10
+          derivative_option_minus = derivative_option_plus
+
+       case (1004)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 1 point on the other side."
+          end if
+          derivative_option_plus  = 30
+          derivative_option_minus = 40
+
+       case (1005)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 50
+          derivative_option_minus = 60
+
+       case (1006)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 80
+          derivative_option_minus = 90
+
+       case (1007)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 3 points on the other side."
+          end if
+          derivative_option_plus  = 100
+          derivative_option_minus = 110
+
+       case (1008)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   2 point on one side, 3 points on the other side."
+          end if
+          derivative_option_plus  = 120
+          derivative_option_minus = 130
+
+       case default
+          print *,"Error! Invalid setting for preconditioner_xi_derivative_option:",preconditioner_xi_derivative_option
+          stop
+       end select
+
+       if (masterProc) print *,"   Uniform grid in alpha, half mesh."
+
+       if (call_uniform_diff_matrices) then
+          call uniformDiffMatrices(Nxi*2, zero, 2*pi, derivative_option_plus,  xi_quadrature_option, alpha_dummy, alphaWeights_dummy, ddalpha_extended, d2dalpha2_dummy)
+          ddalpha = ddalpha_extended(1:Nxi, 1:Nxi) + ddalpha_extended(1:Nxi, (2*Nxi):(Nxi+1):(-1))
+          do ixi = 1,Nxi
+             ddxi_plus_preconditioner(ixi,:) = ddalpha(ixi, 1:Nxi) / sin(alpha(ixi))
+          end do
+
+          call uniformDiffMatrices(Nxi*2, zero, 2*pi, derivative_option_minus, xi_quadrature_option, alpha_dummy, alphaWeights_dummy, ddalpha_extended, d2dalpha2_dummy)
+          ddalpha = ddalpha_extended(1:Nxi, 1:Nxi) + ddalpha_extended(1:Nxi, (2*Nxi):(Nxi+1):(-1))
+          do ixi = 1,Nxi
+             ddxi_minus_preconditioner(ixi,:) = ddalpha(ixi, 1:Nxi) / sin(alpha(ixi))
+          end do
+       end if
+
+       ! *******************************************************************************
+       ! Handle d/dxi for the pitch angle scattering operator in the main matrix.
+       ! *******************************************************************************
+
+       select case (pitch_angle_scattering_option)
+
+       case (1002)
+          if (masterProc) then
+             print *,"Pitch angle scattering operator discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option = 0
+
+       case (1003)
+          if (masterProc) then
+             print *,"Pitch angle scattering operator discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option = 10
+
+       case default
+          print *,"Error! Invalid setting for pitch_angle_scattering_option:",pitch_angle_scattering_option
+          stop
+       end select
+
+       if (masterProc) print *,"   Uniform grid in alpha, half mesh."
+
+       call uniformDiffMatrices(Nxi*2, zero, 2*pi, derivative_option, xi_quadrature_option, alpha_dummy, alphaWeights_dummy, ddalpha_dummy, d2dalpha2_extended)
+       d2dalpha2 = d2dalpha2_extended(1:Nxi, 1:Nxi) + d2dalpha2_extended(1:Nxi, (2*Nxi):(Nxi+1):(-1))
+
+       ! Now use the fact that pitch_angle_scattering = (1/2)*(d2f/dalpha2) - (xi/2)*(df/dxi)
+       do j=1,Nxi
+          if (xi(j)>0) then
+             pitch_angle_scattering_operator(j,:) = (1/two)*d2dalpha2(j,:) - (xi(j)/two)*ddxi_plus(j,:)
+          else
+             pitch_angle_scattering_operator(j,:) = (1/two)*d2dalpha2(j,:) - (xi(j)/two)*ddxi_minus(j,:)
+          end if
+       end do
+
+       ! *******************************************************************************
+       ! Handle d/dxi for the pitch angle scattering operator in the preconditioner matrix.
+       ! *******************************************************************************
+
+       call_uniform_diff_matrices = .true.
+       select case (abs(preconditioner_pitch_angle_scattering_option))
+       case (1100)
+          if (masterProc) then
+             print *,"Pitch angle scattering operator is the same in the preconditioner."
+          end if
+          ! d2dalpha2 will be carried over from the previous section then.
+          call_uniform_diff_matrices = .false.
+
+       case (1002)
+          if (masterProc) then
+             print *,"Preconditioner pitch angle scattering operator is discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option = 0
+
+       case (1003)
+          if (masterProc) then
+             print *,"Preconditioner pitch angle scattering operator is discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option = 10
+
+       case default
+          print *,"Error! Invalid setting for preconditioner_pitch_angle_scattering_option:",preconditioner_pitch_angle_scattering_option
+          stop
+       end select
+
+       if (masterProc) print *,"   Uniform grid in alpha, half mesh."
+
+       if (call_uniform_diff_matrices) then
+          call uniformDiffMatrices(Nxi*2, zero, 2*pi, derivative_option, xi_quadrature_option, alpha_dummy, alphaWeights_dummy, ddalpha_dummy, d2dalpha2_extended)
+          d2dalpha2 = d2dalpha2_extended(1:Nxi, 1:Nxi) + d2dalpha2_extended(1:Nxi, (2*Nxi):(Nxi+1):(-1))
+       end if
+       ! Now use the fact that pitch_angle_scattering = (1/2)*(d2f/dalpha2) - (xi/2)*(df/dxi)
+       do j=1,Nxi
+          if (xi(j)>0) then
+             pitch_angle_scattering_operator_preconditioner(j,:) = (1/two)*d2dalpha2(j,:) - (xi(j)/two)*ddxi_plus_preconditioner(j,:)
+          else
+             pitch_angle_scattering_operator_preconditioner(j,:) = (1/two)*d2dalpha2(j,:) - (xi(j)/two)*ddxi_minus_preconditioner(j,:)
+          end if
+       end do
+
+       deallocate(alpha, alpha_dummy, alphaWeights_dummy, ddalpha_dummy, d2dalpha2_dummy, ddalpha_extended, d2dalpha2_extended, ddalpha, d2dalpha2)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! End of new xi grid
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    else
+
+       ! *******************************************************************************
+       ! Set up uniform y grid and the associated nonuniform xi grid
+       ! *******************************************************************************
+
        derivative_option = 2
-
-    case (3)
-       if (masterProc) then
-          print *,"Pitch angle scattering operator discretized using centered finite differences:"
-          print *,"   2 points on either side."
+       call uniformDiffMatrices(Nxi, -one, one, derivative_option, xi_quadrature_option, y, yWeights, ddy, d2dy2)
+       do j=1,Nxi
+          xi(j) = compute_xi_from_y(y(j))
+          dxi_dy(j) = compute_dxi_dy(y(j))
+          d2xi_dy2(j) = compute_d2xi_dy2(y(j))
+       end do
+       xiWeights = dxi_dy * yWeights
+       print *,"sum(xiWeights):",sum(xiWeights)
+       print *,"sum(xiWeights*xi):",sum(xiWeights*xi)
+       print *,"sum(xiWeights*xi*xi):",sum(xiWeights*xi*xi)
+       if (abs(sum(xiWeights)-2) > 1.0e-2) then
+          print *,"Error! xiWeights do not sum to 2!"
+          print *,"xiWeights:",xiWeights
+          print *,"Sum is",sum(xiWeights)
+          stop
        end if
-       derivative_option = 12
 
-    case default
-       print *,"Error! Invalid setting for pitch_angle_scattering_option:",pitch_angle_scattering_option
-       stop
-    end select
+       ! *******************************************************************************
+       ! Handle d/dxi for the pitch angle scattering operator in the main matrix.
+       ! *******************************************************************************
 
-    call uniformDiffMatrices(Nxi, -one, one, derivative_option, xi_quadrature_option, y_dummy, yWeights_dummy, ddy, d2dy2)
-    do j=1,Nxi
-       !pitch_angle_scattering_operator(j,:) = (1/two)*(1-xi(j)*xi(j))*d2dxi2(j,:) - xi(j)*ddxi(j,:)
-       pitch_angle_scattering_operator(j,:) = (1/two)*(1-xi(j)*xi(j))/(dxi_dy(j)*dxi_dy(j))&
-            *(d2dy2(j,:) - d2xi_dy2(j)/dxi_dy(j)*ddy(j,:)) &
-            - xi(j)/dxi_dy(j)*ddy(j,:)
-    end do
+       select case (pitch_angle_scattering_option)
 
-    ! *******************************************************************************
-    ! Handle d/dxi for the pitch angle scattering operator in the preconditioner matrix.
-    ! *******************************************************************************
+       case (2)
+          if (masterProc) then
+             print *,"Pitch angle scattering operator discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option = 2
 
-    call_uniform_diff_matrices = .true.
-    select case (abs(preconditioner_pitch_angle_scattering_option))
-    case (0)
-       if (masterProc) then
-          print *,"Pitch angle scattering operator is dropped in the preconditioner."
-       end if
-       ddy = 0
-       d2dy2 = 0
-       call_uniform_diff_matrices = .false.
+       case (3)
+          if (masterProc) then
+             print *,"Pitch angle scattering operator discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option = 12
 
-    case (100)
-       if (masterProc) then
-          print *,"Pitch angle scattering operator is the same in the preconditioner."
-       end if
-       ! ddy and d2dy2 will be carried over from the previous section then.
-       call_uniform_diff_matrices = .false.
+       case default
+          print *,"Error! Invalid setting for pitch_angle_scattering_option:",pitch_angle_scattering_option
+          stop
+       end select
 
-    case (2)
-       if (masterProc) then
-          print *,"Preconditioner pitch angle scattering operator is discretized using centered finite differences:"
-          print *,"   1 point on either side."
-       end if
-       derivative_option = 2
-
-    case (3)
-       if (masterProc) then
-          print *,"Preconditioner pitch angle scattering operator is discretized using centered finite differences:"
-          print *,"   2 points on either side."
-       end if
-       derivative_option = 12
-
-    case default
-       print *,"Error! Invalid setting for preconditioner_pitch_angle_scattering_option:",preconditioner_pitch_angle_scattering_option
-       stop
-    end select
-
-    if (call_uniform_diff_matrices) then
        call uniformDiffMatrices(Nxi, -one, one, derivative_option, xi_quadrature_option, y_dummy, yWeights_dummy, ddy, d2dy2)
-    end if
-    do j=1,Nxi
-       !pitch_angle_scattering_operator_preconditioner(j,:) = (1/two)*(1-xi(j)*xi(j))*d2dxi2(j,:) - xi(j)*ddxi(j,:)
-       pitch_angle_scattering_operator_preconditioner(j,:) = (1/two)*(1-xi(j)*xi(j))/(dxi_dy(j)*dxi_dy(j))&
-            *(d2dy2(j,:) - d2xi_dy2(j)/dxi_dy(j)*ddy(j,:)) &
-            - xi(j)/dxi_dy(j)*ddy(j,:)
-    end do
+       do j=1,Nxi
+          !pitch_angle_scattering_operator(j,:) = (1/two)*(1-xi(j)*xi(j))*d2dxi2(j,:) - xi(j)*ddxi(j,:)
+          pitch_angle_scattering_operator(j,:) = (1/two)*(1-xi(j)*xi(j))/(dxi_dy(j)*dxi_dy(j))&
+               *(d2dy2(j,:) - d2xi_dy2(j)/dxi_dy(j)*ddy(j,:)) &
+               - xi(j)/dxi_dy(j)*ddy(j,:)
+       end do
 
-    if (preconditioner_pitch_angle_scattering_option<0) then
-       if (masterProc) then
-          print *,"   But only the diagonal is kept."
+       ! *******************************************************************************
+       ! Handle d/dxi for the pitch angle scattering operator in the preconditioner matrix.
+       ! *******************************************************************************
+
+       call_uniform_diff_matrices = .true.
+       select case (abs(preconditioner_pitch_angle_scattering_option))
+       case (0)
+          if (masterProc) then
+             print *,"Pitch angle scattering operator is dropped in the preconditioner."
+          end if
+          ddy = 0
+          d2dy2 = 0
+          call_uniform_diff_matrices = .false.
+
+       case (100)
+          if (masterProc) then
+             print *,"Pitch angle scattering operator is the same in the preconditioner."
+          end if
+          ! ddy and d2dy2 will be carried over from the previous section then.
+          call_uniform_diff_matrices = .false.
+
+       case (2)
+          if (masterProc) then
+             print *,"Preconditioner pitch angle scattering operator is discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option = 2
+
+       case (3)
+          if (masterProc) then
+             print *,"Preconditioner pitch angle scattering operator is discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option = 12
+
+       case default
+          print *,"Error! Invalid setting for preconditioner_pitch_angle_scattering_option:",preconditioner_pitch_angle_scattering_option
+          stop
+       end select
+
+       if (call_uniform_diff_matrices) then
+          call uniformDiffMatrices(Nxi, -one, one, derivative_option, xi_quadrature_option, y_dummy, yWeights_dummy, ddy, d2dy2)
        end if
        do j=1,Nxi
-          do k=1,Nxi
-             if (j .ne. k) then
-                pitch_angle_scattering_operator_preconditioner(j,k) = 0
-             end if
-          end do
+          !pitch_angle_scattering_operator_preconditioner(j,:) = (1/two)*(1-xi(j)*xi(j))*d2dxi2(j,:) - xi(j)*ddxi(j,:)
+          pitch_angle_scattering_operator_preconditioner(j,:) = (1/two)*(1-xi(j)*xi(j))/(dxi_dy(j)*dxi_dy(j))&
+               *(d2dy2(j,:) - d2xi_dy2(j)/dxi_dy(j)*ddy(j,:)) &
+               - xi(j)/dxi_dy(j)*ddy(j,:)
        end do
-    end if
 
-    ! *******************************************************************************
-    ! Handle d/dxi for the mirror term in the main matrix.
-    ! *******************************************************************************
-
-    select case (xi_derivative_option)
-
-    case (2)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using centered finite differences:"
-          print *,"   1 point on either side."
+       if (preconditioner_pitch_angle_scattering_option<0) then
+          if (masterProc) then
+             print *,"   But only the diagonal is kept."
+          end if
+          do j=1,Nxi
+             do k=1,Nxi
+                if (j .ne. k) then
+                   pitch_angle_scattering_operator_preconditioner(j,k) = 0
+                end if
+             end do
+          end do
        end if
-       derivative_option_plus = 2
-       derivative_option_minus = derivative_option_plus
 
-    case (3)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using centered finite differences:"
-          print *,"   2 points on either side."
-       end if
-       derivative_option_plus  = 12
-       derivative_option_minus = 12
+       ! *******************************************************************************
+       ! Handle d/dxi for the mirror term in the main matrix.
+       ! *******************************************************************************
 
-    case (4)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   0 points on one side, 1 point on the other side."
-       end if
-       derivative_option_plus  = 32
-       derivative_option_minus = 42
+       select case (xi_derivative_option)
 
-    case (5)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   0 points on one side, 2 points on the other side."
-       end if
-       derivative_option_plus  = 52
-       derivative_option_minus = 62
+       case (2)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option_plus = 2
+          derivative_option_minus = derivative_option_plus
 
-    case (6)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   1 point on one side, 2 points on the other side."
-       end if
-       derivative_option_plus  = 82
-       derivative_option_minus = 92
+       case (3)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option_plus  = 12
+          derivative_option_minus = 12
 
-    case (7)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   1 point on one side, 3 points on the other side."
-       end if
-       derivative_option_plus  = 102
-       derivative_option_minus = 112
+       case (4)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 1 point on the other side."
+          end if
+          derivative_option_plus  = 32
+          derivative_option_minus = 42
 
-    case (8)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   2 point on one side, 3 points on the other side."
-          print *,"   High accuracy at the domain ends, though upwinding breaks down there."
-       end if
-       derivative_option_plus  = 122
-       derivative_option_minus = 132
+       case (5)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 52
+          derivative_option_minus = 62
 
-    case (9)
-       if (masterProc) then
-          print *,"d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   2 point on one side, 3 points on the other side."
-          print *,"   Upwinding all the way to the domain ends, meaning lower accuracy there."
-       end if
-       derivative_option_plus  = 123
-       derivative_option_minus = 133
+       case (6)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 82
+          derivative_option_minus = 92
 
-    case default
-       print *,"Error! Invalid setting for xi_derivative_option:",xi_derivative_option
-       stop
-    end select
+       case (7)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 3 points on the other side."
+          end if
+          derivative_option_plus  = 102
+          derivative_option_minus = 112
 
-    call uniformDiffMatrices(Nxi, -one, one, derivative_option_plus,  xi_quadrature_option, y_dummy, yWeights_dummy, ddy_plus,  d2dy2)
-    call uniformDiffMatrices(Nxi, -one, one, derivative_option_minus, xi_quadrature_option, y_dummy, yWeights_dummy, ddy_minus, d2dy2)
-    do j=1,Nxi
-       ddxi_plus(j,:)  =  ddy_plus(j,:) / dxi_dy(j)
-       ddxi_minus(j,:) = ddy_minus(j,:) / dxi_dy(j)
-    end do
+       case (8)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   2 point on one side, 3 points on the other side."
+             print *,"   High accuracy at the domain ends, though upwinding breaks down there."
+          end if
+          derivative_option_plus  = 122
+          derivative_option_minus = 132
 
+       case (9)
+          if (masterProc) then
+             print *,"d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   2 point on one side, 3 points on the other side."
+             print *,"   Upwinding all the way to the domain ends, meaning lower accuracy there."
+          end if
+          derivative_option_plus  = 123
+          derivative_option_minus = 133
 
-    ! *******************************************************************************
-    ! Handle d/dxi for the mirror term in the preconditioner matrix.
-    ! *******************************************************************************
+       case default
+          print *,"Error! Invalid setting for xi_derivative_option:",xi_derivative_option
+          stop
+       end select
 
-    call_uniform_diff_matrices = .true.
-    select case (abs(preconditioner_xi_derivative_option))
-    case (0)
-       if (masterProc) then
-          print *,"d/dxi terms are dropped in the preconditioner."
-       end if
-       ddxi_plus_preconditioner = 0
-       ddxi_minus_preconditioner = 0
-       call_uniform_diff_matrices = .false.
-
-    case (100)
-       if (masterProc) then
-          print *,"d/dxi matrices are the same in the preconditioner."
-       end if
-       ddxi_plus_preconditioner  = ddxi_plus
-       ddxi_minus_preconditioner = ddxi_minus
-       call_uniform_diff_matrices = .false.
-
-    case (2)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using centered finite differences:"
-          print *,"   1 point on either side."
-       end if
-       derivative_option_plus = 2
-       derivative_option_minus = derivative_option_plus
-
-    case (3)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using centered finite differences:"
-          print *,"   2 points on either side."
-       end if
-       derivative_option_plus  = 12
-       derivative_option_minus = 12
-
-    case (4)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   0 points on one side, 1 point on the other side."
-       end if
-       derivative_option_plus  = 32
-       derivative_option_minus = 42
-
-    case (5)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   0 points on one side, 2 points on the other side."
-       end if
-       derivative_option_plus  = 52
-       derivative_option_minus = 62
-
-    case (6)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   1 point on one side, 2 points on the other side."
-       end if
-       derivative_option_plus  = 82
-       derivative_option_minus = 92
-
-    case (7)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   1 point on one side, 3 points on the other side."
-       end if
-       derivative_option_plus  = 102
-       derivative_option_minus = 112
-
-    case (8)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   2 point on one side, 3 points on the other side."
-          print *,"   High accuracy at the domain ends, though upwinding breaks down there."
-       end if
-       derivative_option_plus  = 122
-       derivative_option_minus = 132
-
-    case (9)
-       if (masterProc) then
-          print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
-          print *,"   2 point on one side, 3 points on the other side."
-          print *,"   Upwinding all the way to the domain ends, meaning lower accuracy there."
-       end if
-       derivative_option_plus  = 123
-       derivative_option_minus = 133
-
-    case default
-       print *,"Error! Invalid setting for xi_derivative_option:",xi_derivative_option
-       stop
-    end select
-
-    if (call_uniform_diff_matrices) then
        call uniformDiffMatrices(Nxi, -one, one, derivative_option_plus,  xi_quadrature_option, y_dummy, yWeights_dummy, ddy_plus,  d2dy2)
        call uniformDiffMatrices(Nxi, -one, one, derivative_option_minus, xi_quadrature_option, y_dummy, yWeights_dummy, ddy_minus, d2dy2)
        do j=1,Nxi
-          ddxi_plus_preconditioner( j,:) = ddy_plus( j,:) / dxi_dy(j)
-          ddxi_minus_preconditioner(j,:) = ddy_minus(j,:) / dxi_dy(j)
+          ddxi_plus(j,:)  =  ddy_plus(j,:) / dxi_dy(j)
+          ddxi_minus(j,:) = ddy_minus(j,:) / dxi_dy(j)
        end do
-    end if
 
-    if (preconditioner_xi_derivative_option<0) then
-       if (masterProc) then
-          print *,"   But only the diagonal is kept."
-       end if
-       do j=1,Nxi
-          do k=1,Nxi
-             if (j .ne. k) then
-                ddxi_plus_preconditioner(j,k) = 0
-                ddxi_minus_preconditioner(j,k) = 0
-             end if
+
+       ! *******************************************************************************
+       ! Handle d/dxi for the mirror term in the preconditioner matrix.
+       ! *******************************************************************************
+
+       call_uniform_diff_matrices = .true.
+       select case (abs(preconditioner_xi_derivative_option))
+       case (0)
+          if (masterProc) then
+             print *,"d/dxi terms are dropped in the preconditioner."
+          end if
+          ddxi_plus_preconditioner = 0
+          ddxi_minus_preconditioner = 0
+          call_uniform_diff_matrices = .false.
+
+       case (100)
+          if (masterProc) then
+             print *,"d/dxi matrices are the same in the preconditioner."
+          end if
+          ddxi_plus_preconditioner  = ddxi_plus
+          ddxi_minus_preconditioner = ddxi_minus
+          call_uniform_diff_matrices = .false.
+
+       case (2)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using centered finite differences:"
+             print *,"   1 point on either side."
+          end if
+          derivative_option_plus = 2
+          derivative_option_minus = derivative_option_plus
+
+       case (3)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using centered finite differences:"
+             print *,"   2 points on either side."
+          end if
+          derivative_option_plus  = 12
+          derivative_option_minus = 12
+
+       case (4)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 1 point on the other side."
+          end if
+          derivative_option_plus  = 32
+          derivative_option_minus = 42
+
+       case (5)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   0 points on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 52
+          derivative_option_minus = 62
+
+       case (6)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 2 points on the other side."
+          end if
+          derivative_option_plus  = 82
+          derivative_option_minus = 92
+
+       case (7)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   1 point on one side, 3 points on the other side."
+          end if
+          derivative_option_plus  = 102
+          derivative_option_minus = 112
+
+       case (8)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   2 point on one side, 3 points on the other side."
+             print *,"   High accuracy at the domain ends, though upwinding breaks down there."
+          end if
+          derivative_option_plus  = 122
+          derivative_option_minus = 132
+
+       case (9)
+          if (masterProc) then
+             print *,"Preconditioner d/dxi derivatives discretized using upwinded finite differences:"
+             print *,"   2 point on one side, 3 points on the other side."
+             print *,"   Upwinding all the way to the domain ends, meaning lower accuracy there."
+          end if
+          derivative_option_plus  = 123
+          derivative_option_minus = 133
+
+       case default
+          print *,"Error! Invalid setting for xi_derivative_option:",xi_derivative_option
+          stop
+       end select
+
+       if (call_uniform_diff_matrices) then
+          call uniformDiffMatrices(Nxi, -one, one, derivative_option_plus,  xi_quadrature_option, y_dummy, yWeights_dummy, ddy_plus,  d2dy2)
+          call uniformDiffMatrices(Nxi, -one, one, derivative_option_minus, xi_quadrature_option, y_dummy, yWeights_dummy, ddy_minus, d2dy2)
+          do j=1,Nxi
+             ddxi_plus_preconditioner( j,:) = ddy_plus( j,:) / dxi_dy(j)
+             ddxi_minus_preconditioner(j,:) = ddy_minus(j,:) / dxi_dy(j)
           end do
-       end do
-    end if
+       end if
 
+       if (preconditioner_xi_derivative_option<0) then
+          if (masterProc) then
+             print *,"   But only the diagonal is kept."
+          end if
+          do j=1,Nxi
+             do k=1,Nxi
+                if (j .ne. k) then
+                   ddxi_plus_preconditioner(j,k) = 0
+                   ddxi_minus_preconditioner(j,k) = 0
+                end if
+             end do
+          end do
+       end if
+
+    end if
 !!$    print *,"Here comes ddxi_plus * xi:"
 !!$    print *,matmul(ddxi_plus,xi)
 !!$    print *,"Here comes ddxi_minus * xi:"
@@ -1280,14 +1623,14 @@ subroutine createGrids()
     ! The following arrays will not be needed:
     deallocate(d2dy2,ddy,y_dummy,yWeights_dummy,yWeights,ddy_plus,ddy_minus)
 
-  ! *****************************************************
-  ! Compute B and its derivatives
-  ! *****************************************************
+    ! *****************************************************
+    ! Compute B and its derivatives
+    ! *****************************************************
 
-  allocate(B(Ntheta,Nzeta))
-  allocate(dBdtheta(Ntheta,Nzeta))
-  allocate(dBdzeta(Ntheta,Nzeta))
-  call computeB()
+    allocate(B(Ntheta,Nzeta))
+    allocate(dBdtheta(Ntheta,Nzeta))
+    allocate(dBdzeta(Ntheta,Nzeta))
+    call computeB()
 
 
 !!$  print *,"Here comes ddxi_plus:"
@@ -1300,32 +1643,93 @@ subroutine createGrids()
 !!$  end do
 
 
-    contains
+    if (masterProc) then
+       print *,"Here comes ddtheta_plus:"
+       do j=1,Ntheta
+          print "(*(f6.1))",ddtheta_plus(j,:)
+       end do
+       print *,"Here comes ddtheta_minus:"
+       do j=1,Ntheta
+          print "(*(f6.1))",ddtheta_minus(j,:)
+       end do
+       print *,"Here comes ddtheta_plus_preconditioner:"
+       do j=1,Ntheta
+          print "(*(f6.1))",ddtheta_plus_preconditioner(j,:)
+       end do
+       print *,"Here comes ddtheta_minus_preconditioner:"
+       do j=1,Ntheta
+          print "(*(f6.1))",ddtheta_minus_preconditioner(j,:)
+       end do
 
-      function compute_xi_from_y(yy)
-        implicit none
-        PetscScalar, intent(in) :: yy
-        PetscScalar :: compute_xi_from_y
+       print *,"Here comes ddzeta_plus:"
+       do j=1,Nzeta
+          print "(*(f6.1))",ddzeta_plus(j,:)
+       end do
+       print *,"Here comes ddzeta_minus:"
+       do j=1,Nzeta
+          print "(*(f6.1))",ddzeta_minus(j,:)
+       end do
+       print *,"Here comes ddzeta_plus_preconditioner:"
+       do j=1,Nzeta
+          print "(*(f6.1))",ddzeta_plus_preconditioner(j,:)
+       end do
+       print *,"Here comes ddzeta_minus_preconditioner:"
+       do j=1,Nzeta
+          print "(*(f6.1))",ddzeta_minus_preconditioner(j,:)
+       end do
 
-        compute_xi_from_y = nonuniform_xi_a * yy + nonuniform_xi_b * (yy ** 5)
-      end function compute_xi_from_y
+       print *,"Here comes ddxi_plus:"
+       do j=1,Nxi
+          print "(*(f6.1))",ddxi_plus(j,:)
+       end do
+       print *,"Here comes ddxi_minus:"
+       do j=1,Nxi
+          print "(*(f6.1))",ddxi_minus(j,:)
+       end do
+       print *,"Here comes ddxi_plus_preconditioner:"
+       do j=1,Nxi
+          print "(*(f6.1))",ddxi_plus_preconditioner(j,:)
+       end do
+       print *,"Here comes ddxi_minus_preconditioner:"
+       do j=1,Nxi
+          print "(*(f6.1))",ddxi_minus_preconditioner(j,:)
+       end do
+       print *,"Here comes pitch_angle_scattering_operator:"
+       do j=1,Nxi
+          print "(*(f6.1))",pitch_angle_scattering_operator(j,:)
+       end do
+       print *,"Here comes pitch_angle_scattering_operator_preconditioner:"
+       do j=1,Nxi
+          print "(*(f6.1))",pitch_angle_scattering_operator_preconditioner(j,:)
+       end do
+    end if
 
-      function compute_dxi_dy(yy)
-        implicit none
-        PetscScalar, intent(in) :: yy
-        PetscScalar :: compute_dxi_dy
+  contains
 
-        compute_dxi_dy = nonuniform_xi_a + 5*nonuniform_xi_b * (yy ** 4)
-      end function compute_dxi_dy
+    function compute_xi_from_y(yy)
+      implicit none
+      PetscScalar, intent(in) :: yy
+      PetscScalar :: compute_xi_from_y
 
-      function compute_d2xi_dy2(yy)
-        implicit none
-        PetscScalar, intent(in) :: yy
-        PetscScalar :: compute_d2xi_dy2
+      compute_xi_from_y = nonuniform_xi_a * yy + nonuniform_xi_b * (yy ** 5)
+    end function compute_xi_from_y
 
-        compute_d2xi_dy2 = 20*nonuniform_xi_b * (yy ** 3)
-      end function compute_d2xi_dy2
+    function compute_dxi_dy(yy)
+      implicit none
+      PetscScalar, intent(in) :: yy
+      PetscScalar :: compute_dxi_dy
 
-end subroutine createGrids
+      compute_dxi_dy = nonuniform_xi_a + 5*nonuniform_xi_b * (yy ** 4)
+    end function compute_dxi_dy
+
+    function compute_d2xi_dy2(yy)
+      implicit none
+      PetscScalar, intent(in) :: yy
+      PetscScalar :: compute_d2xi_dy2
+
+      compute_d2xi_dy2 = 20*nonuniform_xi_b * (yy ** 3)
+    end function compute_d2xi_dy2
+
+  end subroutine createGrids
 
 

@@ -704,12 +704,38 @@
 #    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
 #    -pc_type lu -pc_factor_mat_solver_package mumps -mat_mumps_icntl_7 3 -mat_mumps_icntl_4 2 |tee output
 
-./mmc -ksp_view -ksp_type fgmres -ksp_rtol 1e-5 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 1   \
-    -theta_derivative_option 8 -zeta_derivative_option 8 \
-    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
-    -pitch_angle_scattering_option 3 \
-    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
-    -do_fieldsplit -pc_fieldsplit_type additive \
-    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_sym_graph -fieldsplit_0_pc_gamg_threshold 0.2
+#./mmc -ksp_view -ksp_type fgmres -ksp_rtol 1e-5 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 1   \
+#    -theta_derivative_option 8 -zeta_derivative_option 8 \
+#    -xi_derivative_option 8 -preconditioner_xi_derivative_option 4 \
+#    -pitch_angle_scattering_option 3 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -do_fieldsplit -pc_fieldsplit_type additive \
+#    -fieldsplit_0_pc_type gamg -fieldsplit_0_pc_gamg_agg_nsmooths 0 -fieldsplit_0_mg_levels_ksp_type richardson -fieldsplit_0_pc_gamg_sym_graph -fieldsplit_0_pc_gamg_threshold 0.2
 #    -fieldsplit_0_pc_type hypre | tee output
 #-fieldsplit_0_pc_type lu -fieldsplit_0_pc_factor_mat_solver_package mumps |tee output
+
+# 2017-09-24 Benchmarking against sfincs-algebraicMultigrid for LU (not multigrid) preconditioning.
+
+#./mmc -ksp_view -ksp_type gmres -ksp_rtol 1e-6 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 1   \
+#    -theta_derivative_option 3 -zeta_derivative_option 3 \
+#    -preconditioner_theta_derivative_option 2 -preconditioner_zeta_derivative_option 2 \
+#    -xi_derivative_option 3 -preconditioner_xi_derivative_option 2 \
+#    -pitch_angle_scattering_option 3 -preconditioner_pitch_angle_scattering_option 2 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -do_fieldsplit 0 -pc_type lu -pc_factor_mat_solver_package mumps -mat_mumps_icntl_4 2 -mat_mumps_icntl_14 50 -mat_mumps_cntl_1 1e-6 |tee out
+
+#./mmc -ksp_view -ksp_type gmres -ksp_rtol 1e-6 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 1   \
+#    -theta_derivative_option 3 -zeta_derivative_option 3 \
+#    -preconditioner_theta_derivative_option 2 -preconditioner_zeta_derivative_option 2 \
+#    -xi_derivative_option 1003 -preconditioner_xi_derivative_option 1002 \
+#    -pitch_angle_scattering_option 1003 -preconditioner_pitch_angle_scattering_option 1002 \
+#    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+#    -do_fieldsplit 0 -pc_type lu -pc_factor_mat_solver_package mumps -mat_mumps_icntl_4 2 -mat_mumps_icntl_14 50 -mat_mumps_cntl_1 1e-6 |tee out
+
+./mmc -ksp_view -ksp_type gmres -ksp_rtol 1e-6 -ksp_max_it 200 -ksp_gmres_restart 1000 -constraint_option 1   \
+    -theta_derivative_option 8 -zeta_derivative_option 8 \
+    -preconditioner_theta_derivative_option 4 -preconditioner_zeta_derivative_option 4 \
+    -xi_derivative_option 1008 -preconditioner_xi_derivative_option 1004 \
+    -pitch_angle_scattering_option 1003 -preconditioner_pitch_angle_scattering_option 1002 \
+    -options_left -Ntheta 27 -Nzeta 29 -Nxi 70 -nu 1e-3 \
+    -do_fieldsplit 0 -pc_type lu -pc_factor_mat_solver_package mumps -mat_mumps_icntl_4 2 -mat_mumps_icntl_14 50 -mat_mumps_cntl_1 1e-6 |tee out

@@ -29,7 +29,7 @@ subroutine preallocateMatrix(matrix, whichMatrix)
   allocate(predictedNNZsForEachRow(matrixSize))
   allocate(predictedNNZsForEachRowDiagonal(matrixSize))
   ! Set tempInt1 to the expected number of nonzeros in a row of the kinetic equation block:
-  tempInt1 = 6 + (6-1) + (6-1) + 1
+  tempInt1 = 6 + (6-1) + (7-1) + 1
   if (tempInt1 > matrixSize) then
      tempInt1 = matrixSize
   end if

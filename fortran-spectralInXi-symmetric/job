@@ -41,6 +41,25 @@
 
 # Try preconditioning with Block Seidel based on [A, 0; 0, I] (Same as last case, but replace fieldsplit_type additive -> symmetric_multiplicative).
 # Takes 59 or 56 iterations for constraint_option 0 or 2.
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -ksp_type fgmres -constraint_option 2 \
+#  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type symmetric_multiplicative -fieldsplit_0_pc_type lu -fieldsplit_1_pc_type jacobi \
+#  -ksp_max_it 100 -help
+
+# Page 175 of BuffaloTutorial.pdf: Diagonal Schur complement
+# Takes 3 iterations
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -ksp_type fgmres -constraint_option 2 \
+#  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type diag \
+#    -fieldsplit_1_ksp_type minres  -fieldsplit_1_pc_type none -fieldsplit_0_pc_type lu -ksp_max_it 100 -fieldsplit_1_ksp_monitor
+
+# Page 176 of BuffaloTutorial.pdf: Lower Schur complement
+# Takes 2 iterations
+#./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -ksp_type fgmres -constraint_option 0 \
+#  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type lower \
+#    -fieldsplit_1_ksp_type minres  -fieldsplit_1_pc_type none -fieldsplit_0_pc_type lu -ksp_max_it 100 -fieldsplit_1_ksp_monitor
+
+# Page 177 of BuffaloTutorial.pdf: Upper Schur complement
+# Takes 2 iterations
 ./mmc -Ntheta 13 -Nzeta 15 -Nxi 16 -nu 0.1 -E 0 -thetaGridScheme 0 -zetaGridScheme 0 -L_scaling_option 1 -ksp_type fgmres -constraint_option 2 \
-  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type symmetric_multiplicative -fieldsplit_0_pc_type lu -fieldsplit_1_pc_type jacobi \
-  -ksp_max_it 100 -help
+  -pc_type fieldsplit -pc_fieldsplit_detect_saddle_point -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type upper \
+    -fieldsplit_1_ksp_type minres  -fieldsplit_1_pc_type none -fieldsplit_0_pc_type lu -ksp_max_it 100 -fieldsplit_1_ksp_monitor
+

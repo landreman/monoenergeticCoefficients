@@ -1,6 +1,6 @@
 PETSC_DIR=/opt/local/lib/petsc
 
-EXTRA_COMPILE_FLAGS = -I${PETSC_DIR}/include -ffree-line-length-none
+EXTRA_COMPILE_FLAGS = -I${PETSC_DIR}/include -ffree-line-length-none -g -O0
 EXTRA_LINK_FLAGS = 
 
 #FLINKER = ftn
